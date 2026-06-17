@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Meidän treeni & ruoka</title>
+<!-- Etukäteissovellus. Vaihe 2: store synkkaa Google Sheetiin (CONFIG.SHEET_API_URL).
+     Historiat säilyvät avaimittain (hist/paino/vyotaro/workouts/prs : person) myös arkistoinnin jälkeen. -->
+<style>
+  :root{
+    --bg:#131019; --bg2:#1a1626; --surface:#211c30; --surface2:#2b2540; --surfsel:#322a4a;
+    --line:#352e4b; --text:#F1EDF8; --muted:#b3acc4; --dim:#cfc9dd; --ok:#37d399; --gold:#ffd166; --warn:#ff8a8a;
+    --p1:#b15cff; --p2:#ff5fa2;
+    --grad:linear-gradient(135deg,#b15cff,#ff5fa2);
+  }
+  body.jo{ --p1:#b15cff; --p2:#ff5fa2; --grad:linear-gradient(135deg,#b15cff,#ff5fa2); }
+  body.ra{ --p1:#22d3c5; --p2:#3b82f6; --grad:linear-gradient(135deg,#22d3c5,#3b82f6); }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{background:var(--bg);color:var(--text);height:100dvh;display:flex;flex-direction:column;overflow:hidden;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;font-size:19px;
+    background-image:radial-gradient(120% 60% at 50% -10%, color-mix(in srgb,var(--p1) 26%, transparent), transparent 70%);}
+
+  header{padding:14px 16px 13px;flex:none;position:relative;
+    background:linear-gradient(135deg, color-mix(in srgb,var(--p1) 32%,#1a1626), color-mix(in srgb,var(--p2) 22%,#1a1626));
+    border-bottom:1px solid var(--line);}
+  .h-top{display:flex;align-items:center;justify-content:space-between;}
+  .title{font-weight:800;font-size:1.28rem;letter-spacing:.2px;}
+  .date{font-size:1rem;color:var(--text);opacity:.85;}
+  .who{display:flex;gap:9px;margin-top:12px;}
+  .who button{flex:1;border:1.5px solid transparent;background:rgba(255,255,255,.07);color:var(--muted);
+    font-weight:800;font-size:1.18rem;padding:12px;border-radius:13px;cursor:pointer;font-family:inherit;letter-spacing:.3px;}
+  .who button.on{color:#fff;background:var(--grad);box-shadow:0 4px 16px color-mix(in srgb,var(--p1) 45%,transparent);}
+
+  main{flex:1;overflow-y:auto;padding:15px 14px 30px;-webkit-overflow-scrolling:touch;}
+  .view{display:none;} .view.active{display:block;animation:f .22s ease;}
+  @keyframes f{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+
+  h2.sec{font-size:1.02rem;letter-spacing:.06em;text-transform:uppercase;font-weight:800;margin:22px 3px 11px;
+    background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  h2.sec:first-child{margin-top:2px;}
+  h3.sub{font-size:1.14rem;font-weight:800;margin:18px 3px 9px;color:var(--text);}
+  .preview-tag{font-size:.9rem;color:var(--muted);font-style:italic;margin:0 3px 12px;}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 15px;margin-bottom:12px;}
+  .amt{font-size:1.04rem;color:var(--dim);}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .chip{border:1.5px solid var(--line);background:var(--surface2);border-radius:12px;padding:11px 14px;
+    font-size:1.06rem;font-weight:700;color:var(--text);cursor:pointer;display:flex;flex-direction:column;gap:2px;}
+  .chip small{font-weight:600;color:var(--dim);font-size:.95rem;}
+  .chip.sel{border-color:transparent;background:var(--grad);color:#fff;}
+  .chip.sel small{color:rgba(255,255,255,.9);}
+
+  .tog{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--surface);
+    border:1px solid var(--line);border-radius:14px;margin-bottom:9px;cursor:pointer;}
+  .tog .box{width:28px;height:28px;border-radius:8px;border:2.5px solid var(--muted);flex:none;
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.05rem;}
+  .tog .lbl{font-weight:700;font-size:1.2rem;}
+  .tog .lbl small{display:block;font-weight:600;color:var(--dim);font-size:1.08rem;line-height:1.42;margin-top:3px;}
+  .tog.done{border-color:transparent;background:linear-gradient(135deg,color-mix(in srgb,var(--p1) 22%,var(--surface)),color-mix(in srgb,var(--p2) 16%,var(--surface)));}
+  .tog.done .box{background:var(--grad);border-color:transparent;}
+  .optbtn{position:relative;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:16px 15px;margin-bottom:11px;cursor:pointer;}
+  .optbtn.sel{border-color:transparent;background:linear-gradient(135deg,color-mix(in srgb,var(--p1) 22%,var(--surface)),color-mix(in srgb,var(--p2) 16%,var(--surface)));}
+  .ob-top{display:flex;align-items:center;gap:12px;}
+  .ob-ttl{font-weight:800;font-size:1.26rem;flex:1;line-height:1.3;}
+  .ob-check{width:38px;height:38px;border-radius:10px;border:2.5px solid var(--muted);flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3rem;}
+  .ob-check.on{background:var(--grad);border-color:transparent;}
+  .ob-more{font-size:1.0rem;color:var(--muted);font-weight:700;margin-top:9px;}
+  .ob-detail{font-size:1.1rem;color:var(--dim);margin-top:11px;line-height:1.5;border-top:1px solid var(--line);padding-top:11px;}
+
+  .typebar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px;}
+  .typebar button{border:1.5px solid var(--line);background:var(--surface2);border-radius:12px;
+    padding:14px 6px;font-size:1.08rem;font-weight:800;color:var(--muted);cursor:pointer;font-family:inherit;}
+  .typebar button.on{border-color:transparent;background:var(--grad);color:#fff;}
+  .progbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin:4px 0 14px;}
+  .progbar button{border:1.5px solid var(--line);background:var(--surface2);border-radius:12px;padding:13px 4px;font-size:.98rem;font-weight:800;color:var(--muted);cursor:pointer;font-family:inherit;}
+  .progbar button.on{border-color:transparent;background:var(--grad);color:#fff;}
+  .hint{font-size:1.02rem;color:var(--text);opacity:.95;background:rgba(255,255,255,.05);border-radius:10px;
+    padding:10px 13px;margin-top:10px;border-left:3px solid var(--p1);}
+
+  /* TREENI */
+  .exrow{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:13px 14px;margin-bottom:12px;position:relative;overflow:hidden;}
+  .exrow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--grad);}
+  .ex-h{display:flex;align-items:flex-start;gap:9px;}
+  .ex-h .nm{font-weight:800;font-size:1.22rem;flex:1;}
+  .ex-h .tg{font-size:1.02rem;color:var(--dim);margin-top:2px;}
+  .icon-btn{background:rgba(255,255,255,.07);border:none;color:var(--muted);width:38px;height:38px;border-radius:9px;font-size:1.1rem;cursor:pointer;flex:none;}
+  .stepper{display:flex;align-items:center;gap:12px;margin-top:12px;}
+  .stepper button{width:52px;height:52px;border-radius:13px;border:1.5px solid var(--line);cursor:pointer;font-size:1.8rem;font-weight:800;line-height:1;font-family:inherit;background:var(--surface2);color:var(--text);}
+  .stepper .val{font-size:1.95rem;font-weight:800;min-width:96px;text-align:center;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;cursor:pointer;}
+  .stepper .val small{font-size:.85rem;color:var(--muted);font-weight:700;-webkit-text-fill-color:var(--muted);}
+  .pr{font-size:.92rem;color:var(--gold);font-weight:800;margin-left:auto;}
+  .exchart{margin-top:12px;}
+  .edit-grid{display:flex;flex-direction:column;gap:9px;margin-top:11px;}
+  .edit-grid input,.lk input,.mt input{background:var(--bg2);border:1.5px solid var(--line);border-radius:11px;padding:12px 13px;color:var(--text);font-size:1.08rem;font-family:inherit;width:100%;}
+  .edit-row{display:flex;gap:9px;} .edit-row input{flex:1;}
+  .btn{border:none;border-radius:12px;padding:13px 15px;font-weight:800;font-size:1.04rem;cursor:pointer;font-family:inherit;}
+  .btn.grad{background:var(--grad);color:#fff;} .btn.ghost{background:var(--surface2);color:var(--text);border:1.5px solid var(--line);}
+  .btn.danger{background:rgba(255,90,90,.16);color:#ff9a9a;} .btn.full{width:100%;}
+  .row-btns{display:flex;gap:9px;margin-top:11px;}
+  .save{width:100%;margin-top:5px;background:var(--grad);color:#fff;border:none;border-radius:15px;padding:17px;font-weight:800;font-size:1.16rem;cursor:pointer;font-family:inherit;box-shadow:0 6px 20px color-mix(in srgb,var(--p1) 40%,transparent);}
+  .savednote{text-align:center;font-size:1rem;color:var(--ok);margin-top:10px;min-height:1em;font-weight:700;}
+  .archive-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-top:6px;font-weight:800;font-size:1.04rem;}
+  .arch-item{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px dashed var(--line);border-radius:13px;padding:12px 14px;margin-top:9px;}
+  .arch-item .nm{flex:1;font-weight:700;font-size:1.04rem;color:var(--muted);}
+
+  /* LENKIT */
+  .lk{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 15px;margin-bottom:12px;}
+  .lk .row{display:flex;gap:9px;margin-top:10px;}
+  .lk .row input{flex:1;}
+  .lenkki-item{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px 14px;margin-bottom:8px;font-size:1.04rem;}
+  .lenkki-item .em{font-size:1.3rem;} .lenkki-item .r{margin-left:auto;color:var(--dim);font-size:.98rem;}
+
+  /* VESI */
+  .water-wrap{display:flex;gap:16px;align-items:center;}
+  .bottle{width:92px;flex:none;}
+  .water-info .big{font-size:2.3rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .water-info .big small{font-size:1.05rem;color:var(--muted);font-weight:700;-webkit-text-fill-color:var(--muted);}
+  .water-info .motiv{font-size:1.08rem;color:var(--text);font-weight:700;margin-top:4px;min-height:1.2em;}
+  .water-btns{display:flex;gap:10px;margin-top:15px;}
+  .water-btns button{flex:1;border:1.5px solid var(--line);border-radius:13px;padding:17px 4px;font-weight:800;font-size:1.18rem;cursor:pointer;font-family:inherit;background:var(--surface2);color:var(--text);}
+  .water-btns button.plus{background:var(--grad);color:#fff;border-color:transparent;}
+  .streak{margin-top:13px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:14px 15px;display:flex;align-items:center;gap:14px;}
+  .streak .fire{font-size:2.1rem;} .streak .s-n{font-size:1.95rem;font-weight:800;color:var(--gold);} .streak .s-t{font-size:1rem;color:var(--dim);}
+
+  /* summary / badges */
+  .etapit{display:flex;gap:10px;flex-wrap:wrap;}
+  .badge{flex:1;min-width:96px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:13px;text-align:center;}
+  .badge .em{font-size:1.7rem;} .badge .bn{font-size:1.55rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;} .badge .bt{font-size:.9rem;color:var(--dim);}
+  .badge.lock{opacity:.45;}
+
+  /* partner */
+  .pp-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:1.06rem;flex-wrap:wrap;}
+  .pp-row:last-of-type{border-bottom:none;}
+  .pp-name{font-weight:800;min-width:92px;} .pp-name.jo{color:#cd97ff;} .pp-name.ra{color:#5cd0e6;}
+  .pp-stat{color:var(--dim);font-size:1rem;}
+  .cheer-hi{background:linear-gradient(135deg,color-mix(in srgb,var(--p1) 26%,var(--surface)),color-mix(in srgb,var(--p2) 18%,var(--surface)));border:1px solid var(--line);border-radius:13px;padding:12px 14px;margin-top:11px;font-size:1.05rem;font-weight:700;}
+
+  /* rewards */
+  .rw{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:9px;}
+  .rw .d{font-weight:800;font-size:1.1rem;min-width:72px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .rw input{flex:1;background:var(--bg2);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font-size:1.02rem;font-family:inherit;}
+  .rw .st{font-size:1.4rem;flex:none;}
+  .rw.earned{border-color:var(--gold);}
+  .goal-prog .gp-top{display:flex;justify-content:space-between;gap:10px;font-weight:700;font-size:1.06rem;margin-bottom:8px;}
+  .bar{height:13px;background:var(--surface2);border-radius:8px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--grad);border-radius:8px;transition:width .35s;}
+  .goal-prog .gp-st{font-size:1.02rem;color:var(--dim);margin-top:8px;font-weight:600;}
+  .goal-inputs{display:flex;flex-direction:column;gap:11px;margin-top:13px;}
+  .gi{display:flex;flex-direction:column;gap:5px;}
+  .gi label{font-weight:700;font-size:1.02rem;color:var(--dim);}
+  .gi input{background:var(--bg2);border:1.5px solid var(--line);border-radius:11px;padding:13px 13px;color:var(--text);font-size:1.1rem;font-family:inherit;width:100%;}
+
+  /* charts */
+  .chartbox{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:13px 14px 7px;margin-bottom:12px;}
+  .chartbox h4{margin:0 0 2px;font-size:1.08rem;}
+  .mt .row{display:flex;gap:9px;margin-top:10px;align-items:center;}
+  .mt .row label{min-width:88px;font-weight:700;font-size:1.06rem;}
+  svg{display:block;width:100%;height:auto;}
+
+  nav{display:flex;background:var(--bg2);border-top:1px solid var(--line);flex:none;padding-bottom:env(safe-area-inset-bottom);}
+  nav button{flex:1;border:none;background:none;padding:10px 2px 12px;cursor:pointer;font-family:inherit;color:var(--muted);font-weight:700;font-size:.82rem;}
+  nav button .ic{display:block;font-size:1.55rem;margin-bottom:2px;filter:grayscale(.4);}
+  nav button.on{color:transparent;background:var(--grad);-webkit-background-clip:text;background-clip:text;}
+  nav button.on .ic{filter:none;}
+
+  #toast{position:fixed;left:50%;top:72px;transform:translateX(-50%) translateY(-20px);z-index:50;background:var(--grad);color:#fff;font-weight:800;font-size:1.05rem;padding:13px 20px;border-radius:30px;box-shadow:0 8px 26px rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:.28s;max-width:92%;text-align:center;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  #confetti{position:fixed;inset:0;z-index:60;pointer-events:none;}
+</style>
+</head>
+<body class="jo">
+
+<header>
+  <div class="h-top"><div class="title">Meidän treeni &amp; ruoka</div><div class="date" id="dateLbl"></div></div>
+  <div class="who">
+    <button class="on" id="whoJo" onclick="setPerson('jo')">Johanna</button>
+    <button id="whoRa" onclick="setPerson('ra')">Rauli</button>
+  </div>
+</header>
+
+<main>
+  <div class="view active" id="v-ruoka"></div>
+  <div class="view" id="v-sali"></div>
+  <div class="view" id="v-vesi"></div>
+  <div class="view" id="v-edist"></div>
+</main>
+
+<nav>
+  <button class="on" id="n-ruoka" onclick="showView('ruoka')"><span class="ic">🍽️</span>Ruoka</button>
+  <button id="n-sali" onclick="showView('sali')"><span class="ic">🏋️</span>Treeni</button>
+  <button id="n-vesi" onclick="showView('vesi')"><span class="ic">💧</span>Vesi</button>
+  <button id="n-edist" onclick="showView('edist')"><span class="ic">🏅</span>Edistyminen</button>
+</nav>
+
+<div id="toast"></div>
+<canvas id="confetti"></canvas>
+
+<script>
+const CONFIG={SHEET_API_URL:""};
+const mem={};
+const store={get(k,def){try{const v=localStorage.getItem(k);return v==null?(k in mem?mem[k]:def):JSON.parse(v);}catch(e){return (k in mem)?mem[k]:def;}},
+  set(k,v){mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+const state={person:'jo',date:null,view:'ruoka',prog:1,editing:null,adding:false,showArchive:false};
+function dkey(off){const d=new Date();d.setDate(d.getDate()-(off||0));return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+state.date=dkey(0);
+function within(dstr,n){const a=dstr.split('-').map(Number);const dt=new Date(a[0],a[1]-1,a[2]);return (Date.now()-dt.getTime())/86400000 < n;}
+function fmtDate(){const d=new Date();return ['su','ma','ti','ke','to','pe','la'][d.getDay()]+' '+d.getDate()+'.'+(d.getMonth()+1)+'.';}
+document.getElementById('dateLbl').textContent=fmtDate();
+function p1(){return getComputedStyle(document.body).getPropertyValue('--p1').trim();}
+function p2(){return getComputedStyle(document.body).getPropertyValue('--p2').trim();}
+const NAMES={jo:'Johanna',ra:'Rauli'};
+const NAMES_PART={jo:'Johannaa',ra:'Raulia'};
+const NAMES_ALL={jo:'Johannalle',ra:'Raulille'};
+const NUM=v=>(v/1000).toFixed(1).replace('.',',');
+
+/* CONFETTI + TOAST */
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2800);}
+function confetti(big){const c=document.getElementById('confetti'),ctx=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;
+  const cols=[p1(),p2(),'#ffd166','#ffffff'];const N=big?280:150;let ps=[];
+  for(let i=0;i<N;i++)ps.push({x:innerWidth/2+(Math.random()-.5)*(big?260:160),y:innerHeight*.3,vx:(Math.random()-.5)*(big?13:10),vy:Math.random()*-(big?13:10)-3,g:.30,s:5+Math.random()*7,col:cols[i%cols.length],rot:Math.random()*6,vr:(Math.random()-.5)*.45,life:0});
+  let t=0;(function fr(){ctx.clearRect(0,0,c.width,c.height);t++;let al=false;ps.forEach(p=>{p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;p.life++;if(p.y<c.height+30)al=true;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.globalAlpha=Math.max(0,1-p.life/(big?120:95));ctx.fillStyle=p.col;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);ctx.restore();});if(al&&t<(big?160:130))requestAnimationFrame(fr);else ctx.clearRect(0,0,c.width,c.height);})();}
+function celebrate(msg,big){toast(msg);confetti(big);}
+
+/* CHART */
+function lineChart(id,opts){
+  const W=opts.width||300,H=opts.height||120,padL=32,padR=12,padT=12,padB=18;
+  const cats=opts.categories,series=opts.series;let all=[];series.forEach(s=>s.data.forEach(v=>{if(v!=null)all.push(v);}));
+  const refs=[];if(opts.goal!=null)refs.push(opts.goal);if(opts.ref!=null)refs.push(opts.ref.val);
+  if(!all.length){document.getElementById(id).innerHTML='<div style="font-size:1rem;color:var(--muted);padding:8px 2px">Ei vielä dataa — kirjaa ensimmäinen tulos.</div>';return;}
+  let min=Math.min(...all,...refs),max=Math.max(...all,...refs);const rg=(max-min)||1;min-=rg*.1;max+=rg*.1;
+  const x=i=>padL+(W-padL-padR)*(cats.length<2?0.5:i/(cats.length-1));
+  const y=v=>padT+(H-padT-padB)*(1-(v-min)/(max-min));const gid='g_'+id;
+  let svg=`<svg viewBox="0 0 ${W} ${H}"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${p1()}"/><stop offset="1" stop-color="${p2()}"/></linearGradient><linearGradient id="${gid}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p1()}" stop-opacity=".28"/><stop offset="1" stop-color="${p1()}" stop-opacity="0"/></linearGradient></defs>`;
+  for(let g=0;g<=3;g++){const val=min+(max-min)*g/3,yy=y(val);svg+=`<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="#332e47"/><text x="${padL-4}" y="${yy+3}" font-size="9" fill="#857e98" text-anchor="end">${Math.round(val)}</text>`;}
+  if(opts.goal!=null){const gy=y(opts.goal);svg+=`<line x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}" stroke="#ffd166" stroke-width="1.2" stroke-dasharray="4 3"/><text x="${W-padR}" y="${gy-3}" font-size="9" fill="#ffd166" text-anchor="end">tav. ${opts.goal}</text>`;}
+  if(opts.ref!=null){const ry=y(opts.ref.val);svg+=`<line x1="${padL}" y1="${ry}" x2="${W-padR}" y2="${ry}" stroke="${opts.ref.color||'#ff8a8a'}" stroke-width="1.2" stroke-dasharray="5 3"/><text x="${W-padR}" y="${ry-3}" font-size="9" fill="${opts.ref.color||'#ff8a8a'}" text-anchor="end">${opts.ref.label}</text>`;}
+  const s=series[0];let pts=[];s.data.forEach((v,i)=>{if(v!=null)pts.push([x(i),y(v)]);});
+  if(pts.length>1){svg+=`<polygon points="${pts.map(p=>p.join(',')).join(' ')} ${pts[pts.length-1][0]},${H-padB} ${pts[0][0]},${H-padB}" fill="url(#${gid}f)"/>`;}
+  svg+=`<polyline fill="none" stroke="url(#${gid})" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round" points="${pts.map(p=>p.join(',')).join(' ')}"/>`;
+  pts.forEach((p,i)=>svg+=`<circle cx="${p[0]}" cy="${p[1]}" r="${i===pts.length-1?3.6:2.6}" fill="${i===pts.length-1?p2():'#1a1626'}" stroke="${p2()}" stroke-width="2"/>`);
+  svg+='</svg>';document.getElementById(id).innerHTML=svg;
+}
+
+/* EXERCISES + seeds */
+const PROGRAMS={
+  jo:{
+    1:[{n:'Hip thrust',sets:3,reps:'10–12',b:50},{n:'Jalkaprässi',sets:3,reps:'10–12',b:110},{n:'Askelkyykky (step-up)',sets:3,reps:'8–10',b:20},{n:'Lonkan loitonnus',sets:3,reps:'12–15',b:35}],
+    2:[{n:'Goblet-kyykky',sets:3,reps:'10–12',b:20},{n:'Pakaran potku (talja)',sets:3,reps:'12–15',b:15},{n:'Takareiden koukistus',sets:3,reps:'12',b:25},{n:'Tuettu soutu',sets:3,reps:'12',b:25}],
+    3:[{n:'Bulgarian split squat',sets:3,reps:'8–10',b:12},{n:'Hip thrust',sets:3,reps:'10–12',b:50},{n:'Lonkan loitonnus',sets:3,reps:'12–15',b:35},{n:'Pohjenousut',sets:3,reps:'15',b:40}]
+  },
+  ra:{
+    1:[{n:'Jalkaprässi',sets:3,reps:'10–12',b:170},{n:'Jalkojen ojennus',sets:3,reps:'12',b:55},{n:'Takareiden koukistus',sets:3,reps:'12',b:45},{n:'Pohjenousut',sets:3,reps:'15',b:80}],
+    2:[{n:'Jalkaprässi',sets:3,reps:'10–12',b:170},{n:'Pohjenousut',sets:3,reps:'15',b:80},{n:'Penkki (lääkärin luvalla)',sets:3,reps:'8',b:0}],
+    3:[{n:'Jalkaprässi',sets:3,reps:'10–12',b:170},{n:'Jalkojen ojennus',sets:3,reps:'12',b:55},{n:'Takareiden koukistus',sets:3,reps:'12',b:45}]
+  }
+};
+const PROG_META={1:{e:'🟢',l:'1. treeni'},2:{e:'🟡',l:'2. treeni'},3:{e:'🔴',l:'3. treeni'}};
+const SEED_PAINO={jo:[66,65.6,65.5,65.2,65.0],ra:[95,94.6,94.2,94.0,93.6]};
+const SEED_VYO={jo:[87,86,85.5,85,84.5],ra:[104,103,102.5,102,101]};
+const WAIST_LIMIT={jo:80,ra:94}; // terveellisen vyötärön yläraja: nainen 80 cm, mies 94 cm (yleinen suositus)
+function initData(){
+  ['jo','ra'].forEach(p=>{
+    [1,2,3].forEach(pr=>{
+      const dk='exdef:'+p+':'+pr;
+      if(!store.get(dk,null)) store.set(dk, PROGRAMS[p][pr].map((e,i)=>({id:'p'+pr+'e'+i,n:e.n,sets:e.sets,reps:e.reps,active:true})));
+      PROGRAMS[p][pr].forEach((e,i)=>{const hk='hist:'+p+':p'+pr+'e'+i;if(store.get(hk,null)===null){let h=[];if(e.b>0)for(let k=0;k<5;k++)h.push({d:dkey((5-k)*4),w:Math.round((e.b-12.5+k*2.5)*2)/2});store.set(hk,h);}});
+    });
+    if(store.get('paino:'+p,null)===null)store.set('paino:'+p,SEED_PAINO[p].map((w,k)=>({d:dkey((5-k)*6),w})));
+    if(store.get('vyotaro:'+p,null)===null)store.set('vyotaro:'+p,SEED_VYO[p].map((w,k)=>({d:dkey((5-k)*6),w})));
+    if(store.get('workouts:'+p,null)===null)store.set('workouts:'+p,[{d:dkey(1),type:'sali',label:'1. treeni'},{d:dkey(3),type:'lenkki',label:'Kävely',min:45,km:4},{d:dkey(5),type:'sali',label:'2. treeni'}]);
+    if(store.get('prs:'+p,null)===null)store.set('prs:'+p,[{d:dkey(2),ex:PROGRAMS[p][1][0].n,w:PROGRAMS[p][1][0].b}]);
+    if(store.get('goalWeek:'+p,null)===null)store.set('goalWeek:'+p, p==='jo'?{metric:'sali',target:3,reward:'',earned:false,weekKey:curWeek(),startVal:null,exId:null}:{metric:'ruoka',target:5,reward:'',earned:false,weekKey:curWeek(),startVal:null,exId:null});
+    if(store.get('goalBig:'+p,null)===null)store.set('goalBig:'+p, p==='jo'?{metric:'vyotaro',target:80,reward:'',earned:false,startVal:null,exName:null}:{metric:'liike',target:100,reward:'',earned:false,startVal:null,exName:'Penkki (lääkärin luvalla)'});
+    [1,2,3].forEach(o=>{if(store.get('water:'+p+':'+dkey(o),null)===null)store.set('water:'+p+':'+dkey(o), p==='jo'?2000:2500);});
+  });
+}
+function exDefs(){return store.get('exdef:'+state.person+':'+state.prog,[]);}
+function setExDefs(d){store.set('exdef:'+state.person+':'+state.prog,d);}
+function allExercises(){let out=[];[1,2,3].forEach(pr=>{(store.get('exdef:'+state.person+':'+pr,[])).forEach(e=>{if(e.active)out.push(Object.assign({prog:pr},e));});});return out;}
+function hist(id){return store.get('hist:'+state.person+':'+id,[]);}
+function setHist(id,h){store.set('hist:'+state.person+':'+id,h);}
+function curWeight(id){const h=hist(id);return h.length?h[h.length-1].w:0;}
+function maxWeight(id){const h=hist(id);return h.length?Math.max(...h.map(x=>x.w)):0;}
+function pendingWeight(id){return store.get('pend:'+state.person+':'+id,curWeight(id));}
+function setPending(id,w){store.set('pend:'+state.person+':'+id,w);}
+
+/* RUOKA DATA */
+const BREAKFAST={
+  jo:[{id:1,n:'Kaurapuuro',a:'Kaura 1 dl · raejuusto 3–4 rkl · mustikat 1 dl · pellava 1 rkl · (+kauralese 1 rkl) · maitokahvi'},{id:2,n:'Ruispalat',a:'2 ruispalaa · 1 kananmuna · 1 juustoviipale · kalkkuna 2 kpl · kurkku · maitokahvi'},{id:3,n:'Proteiinirahka',a:'Profeel-rahka 175 g · mustikat 1 dl · pellava 1 rkl · maitokahvi'},{id:4,n:'Chiavanukas',a:'Chiansiemenet 2 rkl · maito/kaurajuoma 1,5 dl · mustikat 1 dl · (+rahka/raejuusto) · maitokahvi'},{id:5,n:'Munakas',a:'2 kananmunaa · juusto · kasviksia (paprika/pinaatti) · (+ruispala) · maitokahvi'}],
+  ra:[{id:1,n:'Kaurapuuro',a:'Kaura 1½ dl · raejuusto 4–5 rkl · mustikat 1 dl · pellava 1 rkl · (+kauralese 1 rkl) · maitokahvi'},{id:2,n:'Ruispalat',a:'3 ruispalaa · 2 kananmunaa · 2 juustoviipaletta · kalkkuna 3 kpl · kurkku · maitokahvi'},{id:3,n:'Proteiinirahka',a:'Profeel-rahka 175 g + ~½ dl kauraa · mustikat 1 dl · pellava 1 rkl · maitokahvi'},{id:4,n:'Chiavanukas',a:'Chiansiemenet 3 rkl · maito/kaurajuoma 2 dl · mustikat 1 dl · (+rahka/raejuusto) · maitokahvi'},{id:5,n:'Munakas',a:'3 kananmunaa · juusto · kalkkuna · kasviksia · (+ruispala) · maitokahvi'}]
+};
+const PROT={jo:[{k:'kala',n:'Kala',a:'savulohi ~120 g'},{k:'kana',n:'Kana',a:'~120 g'},{k:'liha',n:'Liha',a:'pihvi/peura ~120 g'}],ra:[{k:'kala',n:'Kala',a:'savulohi ~180 g'},{k:'kana',n:'Kana',a:'~190 g'},{k:'liha',n:'Liha',a:'pihvi/peura ~190 g'}]};
+const CARB={jo:[{k:'peruna',n:'Peruna',a:'~150 g'},{k:'riisi',n:'Riisi',a:'1 dl'}],ra:[{k:'peruna',n:'Peruna',a:'~250 g'},{k:'riisi',n:'Riisi',a:'2 dl'}]};
+const SOUPS=[{k:'lohi',n:'Lohikeitto'},{k:'kana',n:'Kanakeitto'},{k:'poro',n:'Savuporokeitto'},{k:'makkara',n:'Makkarakeitto'},{k:'pinaatti',n:'Pinaattikeitto'},{k:'herne',n:'Hernekeitto'}];
+const GRILL=[{k:'hamppari',n:'Oma hampurilainen',a:'1 sämpylä + iso pihvi + salaatti'}];
+const MUU={jo:[{k:'bolognese',n:'Spag. bolognese'},{k:'tortilla',n:'Tortilla'},{k:'kookos',n:'Kana-kookos'},{k:'carbonara',n:'Carbonara'},{k:'hese',n:'Hese / Mäkki'},{k:'sushi',n:'Sushi',a:'~8–10 palaa (1 rulla)'}],
+  ra:[{k:'bolognese',n:'Spag. bolognese'},{k:'tortilla',n:'Tortilla'},{k:'kookos',n:'Kana-kookos'},{k:'carbonara',n:'Carbonara'},{k:'hese',n:'Hese / Mäkki'},{k:'sushi',n:'Sushi',a:'~14–18 palaa (2 rullaa)'}]};
+function DEFAULTFOOD(){return {aamupala:null,lounas:{tyyppi:'lautas',prot:null,salaatti:false,carb:null,keitto:null,grill:null,muu:null},paivallinen:{tyyppi:'lautas',prot:null,salaatti:false,carb:null,keitto:null,grill:null,muu:null},valipala:{maitokahvi:false,raejuusto:false,pahkina:false,rahka:false},iltapala:{leipa:false,raejuusto:false,rahka:false,jogurtti:false},herkut:{karkit:false,sipsit:false,letut:false,jatski:false,muu:false},palautus:false,sauna:false};}
+function foodState(){return Object.assign(DEFAULTFOOD(),store.get('food:'+state.person+':'+state.date,{}));}
+function foodOf(p){return Object.assign(DEFAULTFOOD(),store.get('food:'+p+':'+state.date,{}));}
+function saveFood(f){store.set('food:'+state.person+':'+state.date,f);checkDay();}
+function mealDone(m){return m.tyyppi==='lautas'?(m.prot&&m.carb):m.tyyppi==='keitto'?!!m.keitto:m.tyyppi==='grilli'?!!m.grill:!!m.muu;}
+function checkDay(){const f=foodState();const done=f.aamupala&&mealDone(f.lounas)&&mealDone(f.paivallinen)&&waterToday()>=waterGoal();
+  const flag='celebday:'+state.person+':'+state.date;if(done&&!store.get(flag,false)){store.set(flag,true);celebrate('🎉 Päivä putkessa – ruoat ja vesi kohdillaan!');checkGoals();}}
+
+/* RENDER RUOKA */
+function renderRuoka(){
+  const f=foodState(),p=state.person;let h='';
+  h+='<h2 class="sec">Aamupala — täppää syömäsi, napauta nähdäksesi annoksen</h2>';
+  BREAKFAST[p].forEach(o=>{h+=optBtn('a'+o.id,o.n,o.a,f.aamupala===o.id,`pickAamu(${o.id})`);});
+  ['lounas','paivallinen'].forEach(meal=>{const m=f[meal],tit=meal==='lounas'?'Lounas':'Päivällinen';
+    h+=`<h2 class="sec">${tit} — koosta annos</h2><div class="card"><div class="typebar">${tbtn(meal,'lautas','Lautasmalli',m.tyyppi)}${tbtn(meal,'keitto','Keitto',m.tyyppi)}${tbtn(meal,'grilli','Grilli',m.tyyppi)}${tbtn(meal,'muu','Muu',m.tyyppi)}</div>`;
+    if(m.tyyppi==='lautas'){h+='<div class="amt" style="margin-top:12px;font-weight:800;color:var(--text)">Proteiini</div><div class="chips">';PROT[p].forEach(x=>h+=chip(`setSel('${meal}','prot','${x.k}')`,x.n,x.a,m.prot===x.k));h+='</div>';
+      h+=`<div class="chips" style="margin-top:9px">${chip(`tglSalad('${meal}')`,'Salaatti','puoli lautasta + öljy',m.salaatti)}</div>`;
+      h+='<div class="amt" style="margin-top:12px;font-weight:800;color:var(--text)">Hiilihydraatti</div><div class="chips">';CARB[p].forEach(x=>h+=chip(`setSel('${meal}','carb','${x.k}')`,x.n,x.a,m.carb===x.k));h+='</div>';}
+    else if(m.tyyppi==='keitto'){h+='<div class="chips" style="margin-top:12px">';SOUPS.forEach(x=>h+=chip(`setSel('${meal}','keitto','${x.k}')`,x.n,'',m.keitto===x.k));h+='</div><div class="hint">Keittopäivä merkitty. Lisää kasviksia / proteiinilisuke.</div>';}
+    else if(m.tyyppi==='grilli'){h+='<div class="chips" style="margin-top:12px">';GRILL.forEach(x=>h+=chip(`setSel('${meal}','grill','${x.k}')`,x.n,x.a,m.grill===x.k));h+='</div><div class="hint">Grillipäivä: muiden aterioiden tärkkelys/lisätty rasva pienemmäksi.</div>';}
+    else{h+='<div class="chips" style="margin-top:12px">';MUU[p].forEach(x=>h+=chip(`setSel('${meal}','muu','${x.k}')`,x.n,x.a||'',m.muu===x.k));h+='</div><div class="hint">Kohtuullinen annos + salaatti. Carbonara & Hese/Mäkki harvemmin; sushissa suosi lohta/kalaa + edamame.</div>';}
+    h+='</div>';});
+  h+='<h2 class="sec">Välipala</h2>';
+  const va = p==='jo'
+    ? {raejuusto:'100 g + 1 appelsiini', pahkina:'kourallinen (~20 g)', rahka:'175 g (1 purkki)'}
+    : {raejuusto:'150 g + 1 appelsiini', pahkina:'~30 g', rahka:'175 g + banaani'};
+  h+=optBtn('v_maito','Maitokahvi','kevytmaito',f.valipala.maitokahvi,"tglField('valipala.maitokahvi')");
+  h+=optBtn('v_raejuusto','Raejuusto + appelsiini',va.raejuusto,f.valipala.raejuusto,"tglField('valipala.raejuusto')");
+  h+=optBtn('v_pahkina','Pähkinät',va.pahkina,f.valipala.pahkina,"tglField('valipala.pahkina')");
+  h+=optBtn('v_rahka','Profeel-rahka',va.rahka,f.valipala.rahka,"tglField('valipala.rahka')");
+  h+='<h2 class="sec">Iltapala</h2>';
+  const ia = p==='jo'
+    ? {leipa:'1 ruispala + juusto + leikkele', raejuusto:'100 g + marjat', rahka:'175 g', jogurtti:'jogurtti + mustikat'}
+    : {leipa:'2 ruispalaa + juusto + leikkele', raejuusto:'150 g + marjat', rahka:'175 g', jogurtti:'jogurtti + mustikat'};
+  h+=optBtn('i_leipa','Ruispala + juusto/leikkele',ia.leipa,f.iltapala.leipa,"tglField('iltapala.leipa')");
+  h+=optBtn('i_raejuusto','Raejuusto + marjat',ia.raejuusto,f.iltapala.raejuusto,"tglField('iltapala.raejuusto')");
+  h+=optBtn('i_rahka','Profeel-rahka',ia.rahka,f.iltapala.rahka,"tglField('iltapala.rahka')");
+  h+=optBtn('i_jogurtti','Jogurtti + marjat',ia.jogurtti,f.iltapala.jogurtti,"tglField('iltapala.jogurtti')");
+  h+='<div class="hint">Voit jättää iltapalan väliin, jos päivällinen oli tuhti — silloin älä rastita mitään.</div>';
+  h+='<h2 class="sec">Salipäivänä</h2>';
+  h+=tog('palautus','Palautusjuoma',f.palautus,p==='jo'?'vesi + 30 g hera (+Oboy/banaani)':'vesi + 30–40 g hera');
+  h+='<h2 class="sec">Herkut (la, 1×/vko)</h2>';
+  h+=tog('herkut.karkit','Irtokarkit',f.herkut.karkit);
+  h+=tog('herkut.sipsit','Sipsit + dippi',f.herkut.sipsit,'Taffel + kevytkermaviili');
+  h+=tog('herkut.letut','Letut / pannari',f.herkut.letut);
+  h+=tog('herkut.jatski','Jätski',f.herkut.jatski,'kesäherkku 🍦');
+  h+=tog('herkut.muu','Muu herkku',f.herkut.muu);
+  h+=tog('sauna','Saunajuoma',f.sauna,'lonkero tai olut');
+  document.getElementById('v-ruoka').innerHTML=h;
+}
+function tbtn(m,k,l,c){return `<button class="${c===k?'on':''}" onclick="setType('${m}','${k}')">${l}</button>`;}
+function chip(oc,n,s,sel){return `<div class="chip ${sel?'sel':''}" onclick="${oc}"><span>${n}</span>${s?`<small>${s}</small>`:''}</div>`;}
+function tog(path,l,done,sub){return `<div class="tog ${done?'done':''}" onclick="tglField('${path}')"><div class="box">${done?'✓':''}</div><div class="lbl">${l}${sub?`<small>${sub}</small>`:''}</div></div>`;}
+function optBtn(key,title,detail,sel,toggleCall){state.exp=state.exp||{};const open=!!state.exp[key];
+  return `<div class="optbtn ${sel?'sel':''}" onclick="toggleExp('${key}')"><div class="ob-top"><div class="ob-ttl">${title}</div><div class="ob-check ${sel?'on':''}" onclick="event.stopPropagation();${toggleCall}">${sel?'✓':''}</div></div>${open?`<div class="ob-detail">${detail}</div>`:`<div class="ob-more">Katso annos ▾</div>`}</div>`;}
+function toggleExp(k){state.exp=state.exp||{};state.exp[k]=!state.exp[k];renderRuoka();}
+function pickAamu(id){const f=foodState();f.aamupala=f.aamupala===id?null:id;saveFood(f);renderRuoka();}
+function setType(m,t){const f=foodState();f[m].tyyppi=t;saveFood(f);renderRuoka();}
+function setSel(m,fl,v){const f=foodState();f[m][fl]=f[m][fl]===v?null:v;saveFood(f);renderRuoka();}
+function tglSalad(m){const f=foodState();f[m].salaatti=!f[m].salaatti;saveFood(f);renderRuoka();}
+function tglField(path){const f=foodState();const p=path.split('.');if(p.length===1)f[p[0]]=!f[p[0]];else f[p[0]][p[1]]=!f[p[0]][p[1]];saveFood(f);renderRuoka();}
+
+/* RENDER TREENI (sali + lenkit) */
+const LENKKI_TYPES=[{k:'Kävely',e:'🚶'},{k:'Juoksu',e:'🏃'},{k:'Polkujuoksu',e:'⛰️'},{k:'Luontopolku',e:'🌲'},{k:'Geokätköily',e:'🧭'},{k:'Muu fyysinen aktiviteetti',e:'🤸'}];
+function renderSali(){
+  let h='<h3 class="sub">Salitreeni</h3><div class="amt" style="font-weight:800;color:var(--text);margin:0 3px 4px">Mikä treeni tänään?</div><div class="progbar">';
+  [1,2,3].forEach(pr=>{h+=`<button class="${state.prog===pr?'on':''}" onclick="setProg(${pr})">${PROG_META[pr].e} ${PROG_META[pr].l}</button>`;});
+  h+='</div>';
+  exDefs().filter(e=>e.active).forEach(e=>{const cur=pendingWeight(e.id),mx=maxWeight(e.id),isPR=cur>mx&&cur>0;
+    if(state.editing===e.id){
+      h+=`<div class="exrow"><div class="edit-grid"><input id="edN" value="${e.n.replace(/"/g,'&quot;')}" placeholder="Liikkeen nimi"><div class="edit-row"><input id="edS" type="number" value="${e.sets}" placeholder="Sarjat"><input id="edR" value="${e.reps}" placeholder="Toistot esim. 10–12"></div><div class="row-btns"><button class="btn grad full" onclick="saveEdit('${e.id}')">Valmis</button><button class="btn danger" onclick="archiveEx('${e.id}')">Arkistoi</button></div></div></div>`;
+    } else {
+      h+=`<div class="exrow"><div class="ex-h"><div><div class="nm">${e.n}</div><div class="tg">${e.sets} × ${e.reps}</div></div>${isPR?'<span class="pr">★ PR</span>':''}<button class="icon-btn" onclick="startEdit('${e.id}')">✎</button></div><div class="stepper"><button onclick="adj('${e.id}',-0.5)">−</button><div class="val" onclick="setExact('${e.id}')">${String(cur).replace('.',',')} <small>kg</small></div><button onclick="adj('${e.id}',0.5)">+</button></div><div class="exchart" id="ec_${e.id}"></div></div>`;
+    }
+  });
+  if(state.adding){h+=`<div class="exrow"><div class="edit-grid"><input id="adN" placeholder="Uuden liikkeen nimi"><div class="edit-row"><input id="adS" type="number" value="3" placeholder="Sarjat"><input id="adR" value="10–12" placeholder="Toistot"></div><div class="row-btns"><button class="btn grad full" onclick="addEx()">Lisää liike</button><button class="btn ghost" onclick="state.adding=false;renderSali()">Peruuta</button></div></div></div>`;}
+  else h+=`<button class="btn ghost full" onclick="state.adding=true;renderSali()" style="margin-bottom:12px">＋ Lisää liike</button>`;
+  h+=`<button class="save" onclick="saveSali()">Tallenna salitreeni</button><div class="savednote" id="saliNote"></div>`;
+  const arch=exDefs().filter(e=>!e.active);
+  h+=`<div class="archive-head" onclick="state.showArchive=!state.showArchive;renderSali()"><span>📦 Arkisto (${arch.length})</span><span>${state.showArchive?'▲':'▼'}</span></div>`;
+  if(state.showArchive){if(!arch.length)h+=`<div class="amt" style="padding:9px 4px">Ei arkistoituja liikkeitä. Vaihtaessasi liikkeen vanha siirtyy tänne historioineen.</div>`;
+    arch.forEach(e=>{h+=`<div class="arch-item"><div class="nm">${e.n}<br><span style="font-size:.92rem">${hist(e.id).length} merkintää tallessa</span></div><button class="btn grad" onclick="restoreEx('${e.id}')">Palauta</button></div>`;});}
+  // LENKIT
+  h+='<h3 class="sub">Lenkit / liikunta</h3><div class="lk"><div class="amt" style="font-weight:800;color:var(--text)">Tyyppi</div><div class="chips" id="lkTypes"></div><div class="row"><input id="lkMin" type="number" inputmode="numeric" placeholder="Kesto (min)"><input id="lkKm" type="number" inputmode="decimal" placeholder="km (valinn.)"></div><button class="btn grad full" style="margin-top:10px" onclick="addLenkki()">Kirjaa lenkki</button></div>';
+  const recent=store.get('workouts:'+state.person,[]).filter(w=>w.type==='lenkki'&&within(w.d,7)).reverse();
+  if(recent.length){h+='<div class="amt" style="margin:4px 3px 8px">Tällä viikolla:</div>';recent.forEach(w=>{const em=(LENKKI_TYPES.find(t=>t.k===w.label)||{e:'👟'}).e;h+=`<div class="lenkki-item"><span class="em">${em}</span><span>${w.label}</span><span class="r">${w.min?w.min+' min':''}${w.km?' · '+w.km+' km':''}</span></div>`;});}
+  h+=`<div class="hint">${state.person==='jo'?'Pepputreeni: tavoite ~2,5 kg/viikko hip thrustiin & jalkaprässiin, kun toistot täyttyvät kivutta.':'Yläkropan liikkeet & penkki vasta kirurgin/fysion luvalla.'}</div>`;
+  document.getElementById('v-sali').innerHTML=h;
+  // type chips
+  let lc='';LENKKI_TYPES.forEach((t,i)=>lc+=`<div class="chip ${state._lk===t.k?'sel':''}" onclick="state._lk='${t.k}';renderSali()"><span>${t.e} ${t.k}</span></div>`);
+  document.getElementById('lkTypes').innerHTML=lc;
+  exDefs().filter(e=>e.active&&state.editing!==e.id).forEach(e=>{const hh=hist(e.id);lineChart('ec_'+e.id,{height:100,categories:hh.map((x,i)=>'#'+(i+1)),series:[{data:hh.map(x=>x.w)}]});});
+}
+function setProg(pr){state.prog=pr;state.editing=null;state.adding=false;state.showArchive=false;renderSali();}
+function adj(id,d){setPending(id,Math.max(0,Math.round((pendingWeight(id)+d)*10)/10));renderSali();}
+function setExact(id){const v=prompt('Aseta paino (kg):',pendingWeight(id));if(v!=null&&!isNaN(parseFloat(v.replace(',','.'))))setPending(id,Math.max(0,parseFloat(v.replace(',','.'))));renderSali();}
+function startEdit(id){state.editing=id;renderSali();}
+function saveEdit(id){const d=exDefs(),e=d.find(x=>x.id===id);e.n=document.getElementById('edN').value.trim()||e.n;e.sets=parseInt(document.getElementById('edS').value)||e.sets;e.reps=document.getElementById('edR').value.trim()||e.reps;setExDefs(d);state.editing=null;renderSali();}
+function archiveEx(id){const d=exDefs();d.find(x=>x.id===id).active=false;setExDefs(d);state.editing=null;toast('Liike arkistoitu — historia tallessa');renderSali();}
+function restoreEx(id){const d=exDefs();d.find(x=>x.id===id).active=true;setExDefs(d);toast('Liike palautettu historioineen');renderSali();}
+function addEx(){const n=document.getElementById('adN').value.trim();if(!n){toast('Anna liikkeen nimi');return;}const d=exDefs(),id='c'+Date.now();d.push({id,n,sets:parseInt(document.getElementById('adS').value)||3,reps:document.getElementById('adR').value.trim()||'10–12',active:true});setExDefs(d);setHist(id,[]);state.adding=false;renderSali();}
+function logWorkout(type,label,extra){const w=store.get('workouts:'+state.person,[]);if(type==='sali'&&w.some(x=>x.d===state.date&&x.type==='sali'))return;w.push(Object.assign({d:state.date,type,label},extra||{}));store.set('workouts:'+state.person,w);}
+function saveSali(){let prs=[];exDefs().filter(e=>e.active).forEach(e=>{const w=pendingWeight(e.id);if(w<=0)return;const mx=maxWeight(e.id),h=hist(e.id),i=h.findIndex(x=>x.d===state.date);if(i>=0)h[i].w=w;else h.push({d:state.date,w});setHist(e.id,h);if(w>mx&&mx>0){prs.push(e.n+' '+w+' kg');const pl=store.get('prs:'+state.person,[]);pl.push({d:state.date,ex:e.n,w});store.set('prs:'+state.person,pl);}});
+  logWorkout('sali',PROG_META[state.prog].l);const note=document.getElementById('saliNote');
+  if(prs.length){celebrate('★ Uusi ennätys: '+prs[0]+(prs.length>1?` (+${prs.length-1})`:'')+'!',true);note.textContent='✓ Tallennettu — uusi ennätys!';}
+  else{toast('💪 Salitreeni tallennettu!');note.textContent='✓ Tallennettu — synkkaa Sheetiin vaiheessa 2';}
+  setTimeout(()=>{note.textContent='';},2400);checkGoals();renderSali();}
+function addLenkki(){const type=state._lk;if(!type){toast('Valitse lenkin tyyppi');return;}const min=parseInt(document.getElementById('lkMin').value)||0;const km=parseFloat((document.getElementById('lkKm').value||'').replace(',','.'))||0;
+  logWorkout('lenkki',type,{min,km:km||undefined});state._lk=null;checkGoals();celebrate('👟 '+type+' kirjattu!');renderSali();}
+
+/* VESI */
+function waterGoal(){return state.person==='jo'?2000:2500;}
+function waterToday(){return store.get('water:'+state.person+':'+state.date,0);}
+function streakOf(p){let s=0;const g=p==='jo'?2000:2500;for(let i=0;i<90;i++){if(store.get('water:'+p+':'+dkey(i),0)>=g)s++;else break;}return s;}
+function addWater(ml){const before=waterToday(),g=waterGoal();let v=Math.max(0,before+ml);store.set('water:'+state.person+':'+state.date,v);
+  if(before<g&&v>=g){celebrate('💧 Vesitavoite täynnä!');checkDay();checkMilestones();}renderVesi();}
+function checkMilestones(){const s=streakOf(state.person);const done=store.get('wms:'+state.person,[]);[3,7,14,30].forEach(m=>{if(s>=m&&!done.includes(m)){done.push(m);store.set('wms:'+state.person,done);celebrate('🔥 '+m+' päivän putki – mahtavaa, jatka samaan malliin!',true);}});checkGoals();}
+function renderVesi(){
+  const g=waterGoal(),v=waterToday(),pct=Math.min(100,Math.round(v/g*100)),streak=streakOf(state.person);
+  let motiv=pct>=100?'💧 Tavoite täynnä – hienoa!':pct>=70?'Melkein perillä!':pct>=30?'Hyvää vauhtia, jatka!':'Hyvä alku – ota lasillinen.';
+  const fillH=Math.min(100,v/g*100);
+  document.getElementById('v-vesi').innerHTML=`<h2 class="sec">Veden juonti tänään</h2><div class="card"><div class="water-wrap">
+    <svg class="bottle" viewBox="0 0 60 120"><defs><linearGradient id="wg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="${p1()}"/><stop offset="1" stop-color="${p2()}"/></linearGradient></defs>
+    <rect x="23" y="2" width="14" height="9" rx="2" fill="#3a3550"/><rect x="19" y="11" width="22" height="7" rx="3" fill="#46405f"/>
+    <path d="M15 22 q0 -3 3 -3 h24 q3 0 3 3 v90 q0 5 -5 5 h-20 q-5 0 -5 -5 z" fill="#221d30" stroke="#46405f" stroke-width="1.4"/>
+    <clipPath id="bc"><path d="M15 22 q0 -3 3 -3 h24 q3 0 3 3 v90 q0 5 -5 5 h-20 q-5 0 -5 -5 z"/></clipPath>
+    <rect x="15" y="${22+95*(100-fillH)/100}" width="30" height="${95*fillH/100}" fill="url(#wg)" clip-path="url(#bc)"/></svg>
+    <div class="water-info"><div class="big">${NUM(v)} <small>/ ${NUM(g)} l</small></div><div class="amt">${pct} % tavoitteesta</div><div class="motiv">${motiv}</div></div></div>
+    <div class="water-btns"><button onclick="addWater(-250)">−</button><button class="plus" onclick="addWater(250)">+ 2 dl</button><button class="plus" onclick="addWater(500)">+ 5 dl</button></div></div>
+    <div class="streak"><span class="fire">🔥</span><div><div class="s-n">${streak} pv</div><div class="s-t">putkeen tavoitteessa — seuraava etappi ${[3,7,14,30].find(m=>m>streak)||'30+'} pv</div></div></div>
+    <div class="hint" style="margin-top:12px">Tavoite ${state.person==='jo'?'~2,0 l':'~2,5 l'}/pvä juotuna — osa nesteestä tulee lisäksi ruoasta.</div>`;
+}
+
+/* EDISTYMINEN */
+function partnerCard(){
+  const me=state.person,other=me==='jo'?'ra':'jo';
+  function row(pp){const f=foodOf(pp);const fd=f.aamupala&&mealDone(f.lounas)&&mealDone(f.paivallinen);const w=store.get('water:'+pp+':'+state.date,0),g=pp==='jo'?2000:2500;
+    return `<div class="pp-row"><span class="pp-name ${pp}">${NAMES[pp]}</span><span class="pp-stat">ruoat ${fd?'✅':'⏳'}</span><span class="pp-stat">vesi ${w>=g?'✅':NUM(w)+'/'+NUM(g)+' l'}</span></div>`;}
+  const oF=foodOf(other),oFood=oF.aamupala&&mealDone(oF.lounas)&&mealDone(oF.paivallinen);
+  const oW=store.get('water:'+other+':'+state.date,0),oWdone=oW>=(other==='jo'?2000:2500);
+  let cheerHi='';const ach=oFood?'koko päivän ruoat':(oWdone?'vesitavoitteen':null);
+  if(ach)cheerHi=`<div class="cheer-hi">🎉 ${NAMES[other]} saavutti ${ach} tänään!</div>`;
+  return `<h2 class="sec">Yhdessä tänään</h2><div class="card">${row('jo')}${row('ra')}${cheerHi}<button class="btn grad full" style="margin-top:11px" onclick="cheer('${other}')">Kannusta ${NAMES_PART[other]} 🔥</button></div>`;
+}
+function cheer(p){celebrate('🔥 Kannustus lähetetty '+NAMES_ALL[p]+'!');}
+function weeklyCard(){
+  const w=store.get('workouts:'+state.person,[]).filter(x=>within(x.d,7)).length;
+  const pr=store.get('prs:'+state.person,[]).filter(x=>within(x.d,7)).length;
+  let wd=0;for(let i=0;i<7;i++)if(store.get('water:'+state.person+':'+dkey(i),0)>=waterGoal())wd++;
+  return `<h2 class="sec">Tämä viikko</h2><div class="etapit">
+    <div class="badge"><div class="em">🏋️</div><div class="bn">${w}</div><div class="bt">treeniä</div></div>
+    <div class="badge"><div class="em">⭐</div><div class="bn">${pr}</div><div class="bt">PR:ää</div></div>
+    <div class="badge"><div class="em">💧</div><div class="bn">${wd}/7</div><div class="bt">vesipäivää</div></div></div>`;
+}
+function curWeek(){return Math.floor(Date.now()/(7*86400000));}
+function workoutsWithin(n){return store.get('workouts:'+state.person,[]).filter(x=>within(x.d,n)).length;}
+function saliWithin(n){return store.get('workouts:'+state.person,[]).filter(x=>x.type==='sali'&&within(x.d,n)).length;}
+function lenkkiWithin(n){return store.get('workouts:'+state.person,[]).filter(x=>x.type==='lenkki'&&within(x.d,n)).length;}
+function kmWithin(n){return Math.round(store.get('workouts:'+state.person,[]).filter(x=>x.type==='lenkki'&&within(x.d,n)).reduce((a,x)=>a+(x.km||0),0)*10)/10;}
+function waterDays(n){let c=0;for(let i=0;i<n;i++)if(store.get('water:'+state.person+':'+dkey(i),0)>=waterGoal())c++;return c;}
+function foodDays(n){let c=0;for(let i=0;i<n;i++)if(store.get('celebday:'+state.person+':'+dkey(i),false))c++;return c;}
+function latestVal(key){const h=store.get(key+':'+state.person,[]);return h.length?h[h.length-1].w:null;}
+function firstVal(key){const h=store.get(key+':'+state.person,[]);return h.length?h[0].w:null;}
+
+const WEEK_METRICS=[
+  {k:'liikunta',label:'Liikuntakerrat',unit:'krt/vko',cur:()=>workoutsWithin(7)},
+  {k:'sali',label:'Salitreenit',unit:'krt/vko',cur:()=>saliWithin(7)},
+  {k:'lenkit',label:'Lenkit',unit:'krt/vko',cur:()=>lenkkiWithin(7)},
+  {k:'vesi',label:'Vesipäivät',unit:'pv/vko',cur:()=>waterDays(7)},
+  {k:'ruoka',label:'Ruokapäivät',unit:'pv/vko',cur:()=>foodDays(7)},
+  {k:'km',label:'Lenkkikilometrit',unit:'km/vko',cur:()=>kmWithin(7)}
+];
+const BIG_METRICS=[
+  {k:'paino',label:'Paino',unit:'kg',dir:'down',cur:()=>latestVal('paino'),start:()=>firstVal('paino')},
+  {k:'vyotaro',label:'Vyötärö',unit:'cm',dir:'down',cur:()=>latestVal('vyotaro'),start:()=>firstVal('vyotaro')},
+  {k:'putki',label:'Vesiputki',unit:'pv',cur:()=>streakOf(state.person)},
+  {k:'liike',label:'Liikkeen tulos',unit:'kg',needsEx:true,cur:(g)=>maxWeightByName(g&&g.exName),start:(g)=>firstWeightByName(g&&g.exName)}
+];
+function maxWeightByName(name){if(!name)return 0;let m=0;[1,2,3].forEach(pr=>{(store.get('exdef:'+state.person+':'+pr,[])).forEach(e=>{if(e.n===name){const w=maxWeight(e.id);if(w>m)m=w;}});});return m;}
+function firstWeightByName(name){if(!name)return null;let vals=[];[1,2,3].forEach(pr=>{(store.get('exdef:'+state.person+':'+pr,[])).forEach(e=>{if(e.n===name){const h=hist(e.id);if(h.length)vals.push(h[0].w);}});});return vals.length?Math.min(...vals):null;}
+function metricDef(scope,k){return (scope==='week'?WEEK_METRICS:BIG_METRICS).find(m=>m.k===k);}
+function evalGoal(scope,g){const m=metricDef(scope,g.metric);if(!m)return null;const cur=m.cur(g);let reached,pct;
+  if(m.dir==='down'){const start=g.startVal!=null?g.startVal:(m.start?m.start(g):cur);reached=cur!=null&&cur<=g.target;
+    pct=(start!=null&&start>g.target)?Math.max(0,Math.min(100,(start-cur)/(start-g.target)*100)):(reached?100:0);}
+  else{reached=cur>=g.target;pct=g.target>0?Math.max(0,Math.min(100,cur/g.target*100)):0;}
+  return {m,cur,reached,pct:Math.round(pct)};}
+function checkGoals(){['week','big'].forEach(scope=>{const key=(scope==='week'?'goalWeek:':'goalBig:')+state.person;let g=store.get(key,null);if(!g)return;
+  if(scope==='week'){const cw=curWeek();if(g.weekKey!==cw){g.weekKey=cw;g.earned=false;store.set(key,g);}}
+  const r=evalGoal(scope,g);if(r&&r.reached&&!g.earned){g.earned=true;store.set(key,g);celebrate('🎉 '+(scope==='week'?'Viikkotavoite':'Iso tavoite')+' saavutettu'+(g.reward?': '+g.reward+' 🎁':'!'),true);}});}
+
+function goalsCard(){
+  let h='<h2 class="sec">Viikkotavoite & palkinto</h2><div class="preview-tag">Valitse mihin haluat juuri nyt kannustusta — ja palkinto, jonka lunastat kun saavutat sen. Voit vaihtaa joka viikko.</div>';
+  h+=goalEditor('week');
+  h+='<h2 class="sec">Iso tavoite</h2><div class="preview-tag">Pidempi tavoite (paino, vyötärö, vesiputki tai jonkin liikkeen tulos) omalla palkinnollaan.</div>';
+  h+=goalEditor('big');
+  return h;
+}
+function goalEditor(scope){
+  const key=(scope==='week'?'goalWeek:':'goalBig:')+state.person;const g=store.get(key,null);if(!g)return '';
+  const metrics=scope==='week'?WEEK_METRICS:BIG_METRICS;const r=evalGoal(scope,g);const md=metricDef(scope,g.metric);
+  let h='<div class="card">';
+  if(r){const exName=g.exName?(' · '+g.exName):'';
+    h+=`<div class="goal-prog"><div class="gp-top"><span>${r.m.label}${exName}</span><span>${r.cur==null?'–':r.cur} / ${g.target} ${r.m.unit}</span></div>
+      <div class="bar"><div class="bar-fill" style="width:${r.pct}%"></div></div>
+      <div class="gp-st">${g.reward?(r.reached?'🎁 Saavutettu: '+g.reward:'🔒 Palkinto: '+g.reward):'Aseta palkinto alle 👇'}</div></div>`;}
+  h+='<div class="amt" style="font-weight:800;color:var(--text);margin-top:13px">Mitä tavoittelet?</div><div class="chips">';
+  metrics.forEach(m=>h+=`<div class="chip ${g.metric===m.k?'sel':''}" onclick="setGoalMetric('${scope}','${m.k}')"><span>${m.label}</span></div>`);
+  h+='</div>';
+  if(scope==='big'&&g.metric==='liike'){const seen={};h+='<div class="chips" style="margin-top:8px">';allExercises().forEach(e=>{if(seen[e.n])return;seen[e.n]=1;h+=`<div class="chip ${g.exName===e.n?'sel':''}" onclick="setGoalExName(this.dataset.n)" data-n="${e.n.replace(/"/g,'&quot;')}"><span>${PROG_META[e.prog].e} ${e.n}</span></div>`;});h+='</div>';}
+  h+=`<div class="goal-inputs"><div class="gi"><label>Tavoite (${md?md.unit:''})</label><input type="number" inputmode="decimal" value="${g.target}" onchange="setGoalTarget('${scope}',this.value)"></div>
+    <div class="gi"><label>Palkinto</label><input value="${(g.reward||'').replace(/"/g,'&quot;')}" placeholder="esim. leffailta, uusi treenitoppi…" onchange="setGoalReward('${scope}',this.value)"></div></div></div>`;
+  return h;
+}
+function gget(scope){return store.get((scope==='week'?'goalWeek:':'goalBig:')+state.person,null);}
+function gset(scope,g){store.set((scope==='week'?'goalWeek:':'goalBig:')+state.person,g);}
+function setGoalMetric(scope,k){const g=gget(scope);g.metric=k;g.earned=false;const md=metricDef(scope,k);
+  g.startVal=(md&&md.dir==='down'&&md.start)?md.start(g):null;
+  if(k==='liike'&&!g.exName){const a=allExercises();if(a.length)g.exName=a[0].n;}
+  gset(scope,g);renderEdist();}
+function setGoalExName(name){const g=gget('big');g.exName=name;g.exId=null;g.earned=false;gset('big',g);renderEdist();}
+function setGoalTarget(scope,v){const g=gget(scope);g.target=parseFloat((v||'').replace(',','.'));if(isNaN(g.target))g.target=0;g.earned=false;gset(scope,g);renderEdist();checkGoals();}
+function setGoalReward(scope,v){const g=gget(scope);g.reward=v;gset(scope,g);checkGoals();}
+function monthlyCard(){
+  const pr=store.get('prs:'+state.person,[]).filter(x=>within(x.d,30)).reverse();
+  let h='<h2 class="sec">Kuukauden ennätyskooste</h2>';
+  if(!pr.length)h+='<div class="amt" style="padding:6px 3px">Ei vielä ennätyksiä tällä kuulla — seuraava odottaa!</div>';
+  else{h+='<div class="card">';pr.forEach(x=>h+=`<div class="pp-row"><span style="font-weight:700">⭐ ${x.ex}</span><span class="pp-stat" style="margin-left:auto">${x.w} kg</span></div>`);h+='</div>';}
+  return h;
+}
+function measuresCard(){
+  const ph=store.get('paino:'+state.person,[]),vh=store.get('vyotaro:'+state.person,[]);
+  const lastP=ph.length?ph[ph.length-1].w:'',lastV=vh.length?vh[vh.length-1].w:'';
+  let h='<h2 class="sec">Paino & vyötärö</h2><div class="mt card"><div class="row"><label>Paino kg</label><input id="mP" type="number" inputmode="decimal" value="${lastP}" placeholder="esim. 65,5"></div><div class="row"><label>Vyötärö cm</label><input id="mV" type="number" inputmode="decimal" value="${lastV}" placeholder="esim. 84"></div><button class="btn grad full" style="margin-top:11px" onclick="logMeasures()">Kirjaa tänään</button></div>';
+  h+='<div class="chartbox"><h4>Painokäyrä (kg)</h4><div id="mc_p"></div></div>';
+  h+=`<div class="chartbox"><h4>Vyötärö (cm)</h4><div id="mc_v"></div></div>`;
+  return h;
+}
+function logMeasures(){const pv=parseFloat((document.getElementById('mP').value||'').replace(',','.'));const vv=parseFloat((document.getElementById('mV').value||'').replace(',','.'));
+  if(!isNaN(pv)){const ph=store.get('paino:'+state.person,[]);const i=ph.findIndex(x=>x.d===state.date);if(i>=0)ph[i].w=pv;else ph.push({d:state.date,w:pv});store.set('paino:'+state.person,ph);}
+  if(!isNaN(vv)){const vh=store.get('vyotaro:'+state.person,[]);const i=vh.findIndex(x=>x.d===state.date);if(i>=0)vh[i].w=vv;else vh.push({d:state.date,w:vv});store.set('vyotaro:'+state.person,vh);}
+  toast('📏 Mitat kirjattu!');renderEdist();}
+function renderEdist(){
+  checkGoals();
+  let h=partnerCard()+weeklyCard()+goalsCard()+measuresCard()+monthlyCard();
+  h+='<h2 class="sec">Liikkeiden kehitys</h2>';
+  const act=exDefs().filter(e=>e.active);
+  act.forEach(e=>{h+=`<div class="chartbox"><h4>${e.n} <span style="font-size:.9rem;color:var(--muted);font-weight:600">— ${e.sets}×${e.reps}</span></h4><div id="pc_${e.id}"></div></div>`;});
+  document.getElementById('v-edist').innerHTML=h;
+  // draw measure charts
+  const ph=store.get('paino:'+state.person,[]),vh=store.get('vyotaro:'+state.person,[]);
+  lineChart('mc_p',{height:130,categories:ph.map((x,i)=>'#'+(i+1)),series:[{data:ph.map(x=>x.w)}]});
+  lineChart('mc_v',{height:130,categories:vh.map((x,i)=>'#'+(i+1)),series:[{data:vh.map(x=>x.w)}],ref:{val:WAIST_LIMIT[state.person],label:'yläraja '+WAIST_LIMIT[state.person],color:'#ff8a8a'}});
+  act.forEach(e=>{const hh=hist(e.id);const goal=(state.person==='ra'&&e.n.toLowerCase().includes('penkki'))?100:null;lineChart('pc_'+e.id,{height:120,categories:hh.map((x,i)=>'#'+(i+1)),goal,series:[{data:hh.map(x=>x.w)}]});});
+}
+
+/* NAV */
+function showView(v){state.view=v;state.editing=null;state.adding=false;['ruoka','sali','vesi','edist'].forEach(n=>{document.getElementById('v-'+n).classList.toggle('active',n===v);document.getElementById('n-'+n).classList.toggle('on',n===v);});renderActive();}
+function setPerson(p){state.person=p;state.prog=1;state.editing=null;state.adding=false;state.showArchive=false;state._lk=null;document.body.className=p;document.getElementById('whoJo').className=p==='jo'?'on':'';document.getElementById('whoRa').className=p==='ra'?'on':'';renderActive();}
+function renderActive(){({ruoka:renderRuoka,sali:renderSali,vesi:renderVesi,edist:renderEdist})[state.view]();}
+
+initData();
+renderActive();
+</script>
+</body>
+</html>
