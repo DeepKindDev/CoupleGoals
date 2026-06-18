@@ -370,7 +370,7 @@
 
 <script>
 const CONFIG={SHEET_API_URL:""};
-const APP_VERSION='18.6.2026 · vesiputki korjattu + valevesipäivät pois';
+const APP_VERSION='19.6.2026 · kisatilanne-hyppy + kisakortti siistitty';
 const mem={};
 const store={get(k,def){try{const v=localStorage.getItem(k);return v==null?(k in mem?mem[k]:def):JSON.parse(v);}catch(e){return (k in mem)?mem[k]:def;}},
   set(k,v){mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}if(typeof scheduleSync==='function')scheduleSync(k);}};
@@ -655,7 +655,7 @@ function foodDashboard(f){const aDone=!!f.aamupala,lDone=mealDone(f.lounas),pDon
     `<div><div class="dot" style="background:linear-gradient(135deg,#b15cff,#ff5fa2)"></div><div class="dn">Ruokailut</div><div class="dv">${mealsDone} / 5</div></div>`+
     `<div><div class="dot" style="background:linear-gradient(135deg,#22d3c5,#3b82f6)"></div><div class="dn">Vesi</div><div class="dv">${wlD} / ${wgD} l</div></div>`+
     `<div><div class="dot" style="background:linear-gradient(135deg,#ff8a3d,#ffd166)"></div><div class="dn">Treenit</div><div class="dv">${saliWithin(7)} / 3 vko</div></div>`+
-    `</div><button class="dash-vs" onclick="showView('edist')">🔥 Katso kisatilanne</button></div>`;}
+    `</div><button class="dash-vs" onclick="gotoKisa()">🔥 Katso kisatilanne</button></div>`;}
 function renderRuoka(){
   const f=foodState(),p=state.person;let h=foodDashboard(f);
   const aDone=!!f.aamupala,lDone=mealDone(f.lounas),pDone=mealDone(f.paivallinen),vDone=!!(f.valipala.raejuusto||f.valipala.pahkina||f.valipala.rahka),iDone=!!(f.iltapala.leipa||f.iltapala.raejuusto||f.iltapala.rahka||f.iltapala.jogurtti);
@@ -970,6 +970,7 @@ function renderEdist(){
 /* NAV */
 function showView(v){state.view=v;state.editing=null;state.adding=false;['ruoka','sali','vesi','edist','palkinnot'].forEach(n=>{document.getElementById('v-'+n).classList.toggle('active',n===v);document.getElementById('n-'+n).classList.toggle('on',n===v);});renderActive();}
 function jumpTo(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
+function gotoKisa(){showView('edist');setTimeout(()=>{const el=document.getElementById('sec-kisa');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},70);}
 function setPerson(p){state.person=p;state.prog=1;state.editing=null;state.adding=false;state.showArchive=false;state._lk=null;document.body.className=p;document.getElementById('whoJo').className=p==='jo'?'on':'';document.getElementById('whoRa').className=p==='ra'?'on':'';renderActive();checkCheer();}
 function renderActive(){({ruoka:renderRuoka,sali:renderSali,vesi:renderVesi,edist:renderEdist,palkinnot:renderPalkinnot})[state.view]();}
 
@@ -1077,11 +1078,10 @@ function vsCard(){const t=dkey(0);
   const mL=L(mJ,mR),wL=L(wJ/gJ,wR/gR),sL=L(sJ,sR);
   const CHEERS=['Voittaja saa kehua, häviäjä pesee tiskit 😏','Terve kilpailu, epäterve määrä kunnianhimoa 🔥','Rakkautta on antaa kaikkensa — ja silti haluta voittaa 💞','Kuka vie viikon? Pelimerkit pöytään! 🎯','Hävinnytkin voittaa, kun molemmat treenaa 💪','Pieni nahistelu pitää liekin (ja lihakset) kuumana 🔥','Tänään joku nappaa kärkipaikan. Toivottavasti sinä 😎'];
   const cheer=CHEERS[(new Date().getDate()+new Date().getHours())%CHEERS.length];
-  let h='<h2 class="sec">Kisa 🔥</h2><div class="card"><div class="vs-cheer">'+cheer+'</div>';
+  let h='<h2 class="sec" id="sec-kisa">Kisa 🔥</h2><div class="card"><div class="vs-cheer">'+cheer+'</div>';
   h+='<div class="vs-metric"><div class="vs-mtitle">🍽️ Ruokailut tänään</div>'+vsBar('jo',mJ/5*100,mJ+'/5',mL==='jo')+vsBar('ra',mR/5*100,mR+'/5',mL==='ra')+'</div>';
   h+='<div class="vs-metric"><div class="vs-mtitle">💧 Vesi tänään</div>'+vsBar('jo',wJ/gJ*100,fmtL(wJ),wL==='jo')+vsBar('ra',wR/gR*100,fmtL(wR),wL==='ra')+'</div>';
   h+='<div class="vs-metric"><div class="vs-mtitle">🏋️ Salitreenit tällä viikolla</div>'+vsBar('jo',sJ/3*100,sJ+'/3',sL==='jo')+vsBar('ra',sR/3*100,sR+'/3',sL==='ra')+'</div>';
-  h+='<div class="hsub">👑 = edellä juuri nyt. Vesi vertaillaan kunkin omaan päivätavoitteeseen. Näkyy molempien data kun synkka on päällä.</div>';
   h+='</div>';return h;}
 function changePin(p){lock.person=p;lock.mode='set1';lock.buf='';lock.tmp=null;lock.err='';lock.changing=true;closeSettings();document.getElementById('lock').classList.remove('hidden');renderLock();}
 const PGRAD={jo:'linear-gradient(135deg,#b15cff,#ff5fa2)',ra:'linear-gradient(135deg,#22d3c5,#3b82f6)'};
