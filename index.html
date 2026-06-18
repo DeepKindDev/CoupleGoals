@@ -1011,6 +1011,7 @@ showLock();
 if(!anyPin()&&!store.get('welcomed',false)){store.set('welcomed',true);openSettings();}
 bootSync();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&autoSyncReady&&syncOn())syncPull(true);});
+if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js');}catch(e){}}
 </script>
 </body>
 </html>
