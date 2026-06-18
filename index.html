@@ -25,7 +25,7 @@
   body.ra{ --p1:#22d3c5; --p2:#3b82f6; --grad:linear-gradient(135deg,#22d3c5,#3b82f6); }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;height:100%;width:100%;max-width:100%;overflow-x:hidden;overscroll-behavior:none;}
-  body{background:var(--bg);color:var(--text);height:100dvh;display:flex;flex-direction:column;overflow:hidden;
+  body{background:var(--bg);color:var(--text);position:fixed;inset:0;width:100%;display:flex;flex-direction:column;overflow:hidden;
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;font-size:19px;
     background-image:radial-gradient(120% 60% at 50% -10%, color-mix(in srgb,var(--p1) 26%, transparent), transparent 70%);}
 
@@ -40,7 +40,7 @@
     font-weight:800;font-size:1.18rem;padding:12px;border-radius:13px;cursor:pointer;font-family:inherit;letter-spacing:.3px;}
   .who button.on{color:#fff;background:var(--grad);box-shadow:0 4px 16px color-mix(in srgb,var(--p1) 45%,transparent);}
 
-  main{flex:1;overflow-y:auto;padding:15px 14px 30px;-webkit-overflow-scrolling:touch;}
+  main{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;width:100%;max-width:100%;padding:15px 14px 30px;-webkit-overflow-scrolling:touch;}
   .view{display:none;} .view.active{display:block;animation:f .22s ease;}
   @keyframes f{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
 
@@ -48,7 +48,7 @@
     background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
   h2.sec:first-child{margin-top:2px;}
   h3.sub{font-size:1.14rem;font-weight:800;margin:18px 3px 9px;color:var(--text);}
-  .preview-tag{font-size:.9rem;color:var(--muted);font-style:italic;margin:0 3px 12px;}
+  .preview-tag{font-size:1.0rem;color:var(--muted);font-style:italic;margin:0 3px 12px;line-height:1.45;}
 
   .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 15px;margin-bottom:12px;}
   .amt{font-size:1.04rem;color:var(--dim);}
@@ -83,15 +83,15 @@
   .sqgrid .ob-more,.sqgrid .ob-detail{font-size:.98rem;}
   .foodhero{background:linear-gradient(135deg,color-mix(in srgb,var(--p1) 30%,var(--surface)),color-mix(in srgb,var(--p2) 24%,var(--surface)));border:1px solid var(--line);border-radius:18px;padding:16px 16px 14px;margin-bottom:15px;}
   .foodhero .fh-t{font-size:1.3rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;width:fit-content;}
-  .foodhero .fh-s{font-size:.97rem;color:var(--dim);margin-top:4px;line-height:1.45;}
+  .foodhero .fh-s{font-size:1.1rem;color:var(--text);opacity:.92;margin-top:5px;line-height:1.45;}
   .foodhero .fh-prog{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap;}
-  .fh-chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:20px;padding:7px 12px;font-size:.9rem;font-weight:700;color:var(--dim);font-family:inherit;cursor:pointer;}
+  .fh-chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:20px;padding:8px 13px;font-size:1.0rem;font-weight:700;color:var(--dim);font-family:inherit;cursor:pointer;}
   .fh-chip.on{background:var(--grad);color:#fff;border-color:transparent;}
   .fh-chip:active{transform:scale(.96);}
   .waterhint{display:flex;align-items:center;gap:13px;background:linear-gradient(135deg,color-mix(in srgb,#3b82f6 22%,var(--surface)),color-mix(in srgb,#22d3c5 15%,var(--surface)));border:1px solid var(--line);border-radius:16px;padding:12px 15px;margin-bottom:15px;cursor:pointer;}
   .waterhint .wh-drop{flex:none;filter:drop-shadow(0 3px 8px rgba(59,130,246,.4));}
   .waterhint .wh-t{font-weight:800;font-size:1.06rem;}
-  .waterhint .wh-s{font-size:.9rem;color:var(--dim);margin-top:2px;line-height:1.4;}
+  .waterhint .wh-s{font-size:1.02rem;color:var(--dim);margin-top:3px;line-height:1.42;}
 
   .typebar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px;}
   .typebar button{border:1.5px solid var(--line);background:var(--surface2);border-radius:12px;
@@ -228,12 +228,20 @@
   .set-prof{background:var(--surface2);border:1px solid var(--line);border-radius:13px;padding:12px 13px;margin-bottom:11px;}
   .set-prof .pn{font-weight:800;font-size:1.1rem;margin-bottom:9px;}
   .set-prof .pbtns{display:flex;gap:8px;flex-wrap:wrap;}
-  .set-mini{font-size:.9rem;color:var(--dim);margin-top:7px;}
+  .set-mini{font-size:.98rem;color:var(--dim);margin-top:7px;line-height:1.42;}
   .set-card .btn{border:none;border-radius:11px;padding:11px 15px;font-weight:700;font-family:inherit;font-size:1rem;cursor:pointer;}
   .set-card .btn.grad{background:var(--grad);color:#fff;}
   .set-card .btn.ghost{background:var(--surface);border:1.5px solid var(--line);color:var(--text);}
   .set-card .btn.ok{background:color-mix(in srgb,var(--p1) 18%,var(--surface));border:1.5px solid var(--p1);color:var(--text);}
   .val-input{width:96px;text-align:center;background:var(--bg2);border:2px solid var(--p1);border-radius:10px;padding:6px 4px;color:var(--text);font-size:1.4rem;font-weight:800;font-family:inherit;}
+  .segbtns{display:flex;gap:7px;flex-wrap:wrap;width:100%;}
+  .segb{flex:1;min-width:84px;border:1.5px solid var(--line);background:var(--surface);color:var(--dim);border-radius:10px;padding:9px 8px;font-weight:700;font-family:inherit;font-size:.92rem;cursor:pointer;}
+  .segb.on{background:var(--grad);color:#fff;border-color:transparent;}
+  .hrow{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;font-size:1.04rem;margin-top:9px;}
+  .hrow:first-child{margin-top:0;}
+  .hval{font-weight:800;}
+  .hval.good{color:var(--ok);} .hval.warn{color:var(--warn);}
+  .hsub{font-size:1.0rem;color:var(--dim);margin-top:3px;line-height:1.42;}
   .datebtn{background:none;border:none;color:var(--dim);font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;padding:4px 6px;border-radius:8px;}
   .datebtn.past{background:var(--grad);color:#fff;}
   .date-hidden{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;}
@@ -267,7 +275,7 @@
   .wr-stat{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:13px;padding:12px 10px;}
   .wr-stat .v{font-size:1.5rem;font-weight:800;}
   .wr-stat .l{font-size:.84rem;color:var(--dim);margin-top:2px;}
-  .wr-fun{font-size:.96rem;color:var(--dim);margin-top:10px;line-height:1.5;}
+  .wr-fun{font-size:1.04rem;color:var(--dim);margin-top:10px;line-height:1.5;}
   .wr-card .btn{border:none;border-radius:12px;padding:13px;font-weight:800;font-family:inherit;font-size:1.05rem;cursor:pointer;width:100%;margin-top:14px;background:var(--grad);color:#fff;}
 
   #toast{position:fixed;left:50%;top:72px;transform:translateX(-50%) translateY(-20px);z-index:50;background:var(--grad);color:#fff;font-weight:800;font-size:1.05rem;padding:13px 20px;border-radius:30px;box-shadow:0 8px 26px rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:.28s;max-width:92%;text-align:center;}
@@ -466,7 +474,7 @@ function openWrapped(){const p=state.person,d=wrappedData(p),o=p==='jo'?'ra':'jo
   h+=`<div class="wr-stat"><div class="v">${d.waterL.toString().replace('.',',')} l</div><div class="l">💧 vettä</div></div>`;
   h+=`<div class="wr-stat"><div class="v">${d.streak}</div><div class="l">🔥 päivän putki</div></div>`;
   h+='</div>';
-  if(d.bestPR)h+=`<div class="wr-fun">⭐ Paras ennätys: <b>${d.bestPR.ex} ${d.bestPR.w} kg</b></div>`;
+  if(d.bestPR){const bw=latestVal('paino');const ratio=(bw&&bw>0)?(d.bestPR.w/bw):null;h+=`<div class="wr-fun">⭐ Paras ennätys: <b>${d.bestPR.ex} ${d.bestPR.w} kg</b>${ratio?` — ${ratio.toFixed(1).replace('.',',')}× kehonpainosi 💪`:''}</div>`;}
   h+=`<div class="wr-fun">💞 Yhdessä: ${yhteisKm.toString().replace('.',',')} km ja ${yhteisL.toString().replace('.',',')} l vettä.</div>`;
   if(fun.length)h+='<div class="wr-fun">'+fun.join('<br>')+'</div>';
   h+='<div class="wr-fun" style="font-size:.82rem;opacity:.8">Viimeiset 30 päivää</div>';
@@ -689,7 +697,7 @@ function partnerCard(){
   const oW=store.get('water:'+other+':'+state.date,0),oWdone=oW>=(other==='jo'?2000:2500);
   let cheerHi='';const ach=oFood?'koko päivän ruoat':(oWdone?'vesitavoitteen':null);
   if(ach)cheerHi=`<div class="cheer-hi">🎉 ${nm(other)} saavutti ${ach} tänään!</div>`;
-  return `<h2 class="sec">Yhdessä tänään</h2><div class="card">${row('jo')}${row('ra')}${cheerHi}<button class="btn grad full" style="margin-top:11px" onclick="cheer('${other}')">Kannusta: ${nm(other)} 🔥</button></div>`;
+  return `<h2 class="sec">Yhdessä tänään</h2><div class="card">${row('jo')}${row('ra')}${cheerHi}<button class="btn grad full" style="margin-top:11px" onclick="cheer('${other}')">Lähetä kannustus käyttäjälle: ${nm(other)} 🔥</button></div>`;
 }
 function cheer(p){celebrate('🔥 Kannustus lähetetty: '+nm(p)+'!');}
 function weeklyCard(){
@@ -812,7 +820,7 @@ function measuresCard(){
     const curW=wlist.length?wlist[wlist.length-1]:null,prevW=wlist.length>1?wlist[wlist.length-2]:null;
     const fmt=v=>v==null?'–':v.toFixed(2).replace('.',',');
     let trend='';if(curW!=null&&prevW!=null){const d=curW-prevW;if(d<0)trend=` <span style="color:var(--gold)">▼ ${Math.abs(d).toFixed(2).replace('.',',')} 🍑</span>`;else if(d>0)trend=` <span style="color:#ff8a8a">▲ ${d.toFixed(2).replace('.',',')}</span>`;else trend=' ±0';}
-    if(curW!=null)h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><div style="font-weight:800;font-size:1.04rem">Vyötärö-lantio-suhde</div><div style="font-size:.92rem;color:var(--dim);margin-top:2px">pienempi = peppuvoitto 🍑${(isDemoArr(lh)&&isDemoArr(vh))?' · esikatselu':''}</div></div><div style="font-weight:800;font-size:2.1rem;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">${fmt(curW)}</div></div>${trend?`<div style="margin-top:8px;font-size:.95rem;font-weight:700;color:var(--dim)">edellisestä mittauksesta:${trend}</div>`:''}</div>`;}
+    if(curW!=null)h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><div style="font-weight:800;font-size:1.04rem">Vyötärö-lantio-suhde</div><div style="font-size:.92rem;color:var(--dim);margin-top:2px">pienempi = peppuvoitto 🍑${whrLimit(state.person)?' · terveellinen alle '+whrLimit(state.person).toFixed(2).replace('.',','):''}${(isDemoArr(lh)&&isDemoArr(vh))?' · esikatselu':''}</div></div><div style="font-weight:800;font-size:2.1rem;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">${fmt(curW)}</div></div>${trend?`<div style="margin-top:8px;font-size:.95rem;font-weight:700;color:var(--dim)">edellisestä mittauksesta:${trend}</div>`:''}</div>`;}
   return h;
 }
 function logMeasures(){const pv=parseFloat((document.getElementById('mP').value||'').replace(',','.'));const vv=parseFloat((document.getElementById('mV').value||'').replace(',','.'));
@@ -823,7 +831,7 @@ function logMeasures(){const pv=parseFloat((document.getElementById('mP').value|
   toast('📏 Mitat kirjattu!');checkBadges();renderEdist();}
 function renderEdist(){
   checkGoals();
-  let h=partnerCard()+'<button class="btn grad full" style="margin:2px 0 14px" onclick="openWrapped()">✨ Näytä CoupleGoals Wrapped</button>'+weeklyCard()+heatmapCard()+goalsCard()+measuresCard()+monthlyCard();
+  let h=partnerCard()+'<button class="btn grad full" style="margin:2px 0 14px" onclick="openWrapped()">✨ Näytä CoupleGoals Wrapped</button>'+weeklyCard()+heatmapCard()+goalsCard()+measuresCard()+healthCard()+monthlyCard();
   h+='<h2 class="sec">Liikkeiden kehitys</h2>';
   const act=exDefs().filter(e=>e.active);
   act.forEach(e=>{h+=`<div class="chartbox"><h4>${e.n} <span style="font-size:.9rem;color:var(--muted);font-weight:600">— ${e.sets}×${e.reps}</span>${demoTag(hist(e.id))}</h4><div id="pc_${e.id}"></div></div>`;});
@@ -831,7 +839,7 @@ function renderEdist(){
   // draw measure charts
   const ph=store.get('paino:'+state.person,[]),vh=store.get('vyotaro:'+state.person,[]),lh=store.get('lantio:'+state.person,[]);
   if(ph.length)lineChart('mc_p',{height:130,categories:ph.map((x,i)=>'#'+(i+1)),series:[{data:ph.map(x=>x.w)}]});
-  if(vh.length)lineChart('mc_v',{height:130,categories:vh.map((x,i)=>'#'+(i+1)),series:[{data:vh.map(x=>x.w)}],ref:{val:WAIST_LIMIT[state.person],label:'yläraja '+WAIST_LIMIT[state.person],color:'#ff8a8a'}});
+  if(vh.length){const wl=waistLimit(state.person);lineChart('mc_v',{height:130,categories:vh.map((x,i)=>'#'+(i+1)),series:[{data:vh.map(x=>x.w)}],ref:wl?{val:wl,label:'terveysraja '+wl,color:'#ff8a8a'}:undefined});}
   if(lh.length)lineChart('mc_l',{height:130,categories:lh.map((x,i)=>'#'+(i+1)),series:[{data:lh.map(x=>x.w)}]});
   act.forEach(e=>{const hh=hist(e.id);const goal=(state.person==='ra'&&e.n.toLowerCase().includes('penkki'))?100:null;lineChart('pc_'+e.id,{height:120,categories:hh.map((x,i)=>'#'+(i+1)),goal,series:[{data:hh.map(x=>x.w)}]});});
 }
@@ -906,6 +914,28 @@ function renderLock(){const L=document.getElementById('lock');document.body.clas
 function openSettings(){document.getElementById('settings').classList.remove('hidden');renderSettings();}
 function closeSettings(){document.getElementById('settings').classList.add('hidden');}
 function saveNames(){const j=(document.getElementById('snJo').value||'').trim(),r=(document.getElementById('snRa').value||'').trim();if(j)store.set('name:jo',j);if(r)store.set('name:ra',r);refreshNames();renderActive();renderSettings();toast('Nimet tallennettu');}
+function setSex(p,v){store.set('sex:'+p,v);renderSettings();renderActive();}
+function setAge(p,v){const n=parseInt(v);store.set('age:'+p,isNaN(n)?'':n);renderActive();}
+function sexOf(p){return store.get('sex:'+p,'');}
+function ageOf(p){return store.get('age:'+p,'');}
+function waistLimit(p){const s=sexOf(p);return s==='f'?80:s==='m'?94:null;}
+function whrLimit(p){const s=sexOf(p);return s==='f'?0.85:s==='m'?0.90:null;}
+function weeklyActiveMin(){return store.get('workouts:'+state.person,[]).filter(x=>x.type==='lenkki'&&within(x.d,7)).reduce((a,x)=>a+(x.min||0),0);}
+function currentWHR(p){const lh=store.get('lantio:'+p,[]),vh=store.get('vyotaro:'+p,[]),vMap={};vh.forEach(x=>vMap[x.d]=x.w);for(let i=lh.length-1;i>=0;i--){if(vMap[lh[i].d]!=null&&lh[i].w>0)return vMap[lh[i].d]/lh[i].w;}return null;}
+function healthCard(){const p=state.person,s=sexOf(p),age=ageOf(p);
+  let h='<h2 class="sec">Terveysmittarit</h2>';
+  if(!s&&!age){h+='<div class="card"><div class="amt" style="line-height:1.45">Aseta sukupuoli ja ikä asetuksista (⚙️), niin näet henkilökohtaiset terveysviitteet ja kannustavat vertailut. 💜</div></div>';return h;}
+  h+='<div class="card">';
+  const lv=latestVal('vyotaro'),wl=waistLimit(p);
+  if(wl&&lv!=null){const ok=lv<=wl;h+=`<div class="hrow"><span>Vyötärö</span><span class="hval ${ok?'good':'warn'}">${String(lv).replace('.',',')} cm ${ok?'✅':'↑'}</span></div><div class="hsub">Terveellinen alle ${wl} cm${ok?' — hienoa, olet suosituksen alapuolella!':' — pienikin lasku pienentää riskiä.'}</div>`;}
+  const wm=whrLimit(p),whr=currentWHR(p);
+  if(wm&&whr!=null){const ok=whr<wm;h+=`<div class="hrow"><span>Vyötärö-lantio-suhde</span><span class="hval ${ok?'good':'warn'}">${whr.toFixed(2).replace('.',',')} ${ok?'✅':'↑'}</span></div><div class="hsub">Terveellinen alle ${wm.toFixed(2).replace('.',',')}${ok?' — hyvä tasapaino!':''}.</div>`;}
+  const mins=weeklyActiveMin(),strg=saliWithin(7);
+  h+=`<div class="hrow"><span>Liikunta / viikko</span><span class="hval ${mins>=150?'good':''}">${mins} / 150 min</span></div>`;
+  h+=`<div class="hrow"><span>Voimaharjoittelu / viikko</span><span class="hval ${strg>=2?'good':''}">${strg} / 2 krt</span></div>`;
+  h+=`<div class="hsub">WHO suosittelee aikuisille noin 150 min reipasta liikuntaa ja 2 voimaharjoitusta viikossa.${age?' · Ikäsi: '+age+' v.':''}</div>`;
+  h+='<div class="hsub" style="opacity:.7;margin-top:9px">Yleisiä terveyssuosituksia (mm. WHO) — ei henkilökohtaista lääketieteellistä neuvoa.</div>';
+  h+='</div>';return h;}
 function changePin(p){lock.person=p;lock.mode='set1';lock.buf='';lock.tmp=null;lock.err='';lock.changing=true;closeSettings();document.getElementById('lock').classList.remove('hidden');renderLock();}
 const PGRAD={jo:'linear-gradient(135deg,#b15cff,#ff5fa2)',ra:'linear-gradient(135deg,#22d3c5,#3b82f6)'};
 function gtext(p){return `background:${PGRAD[p]};-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800`;}
@@ -917,6 +947,12 @@ function renderSettings(){const S=document.getElementById('settings');const waOk
   h+=`<div class="set-row" style="border-left:4px solid #3b82f6;border-radius:0;padding-left:10px"><label style="${gtext('ra')}">Profiili 2</label><input type="text" id="snRa" value="${esc(store.get('name:ra',''))}" placeholder="Kirjoita nimi"></div>`;
   const namesSaved=!!(store.get('name:jo',null)||store.get('name:ra',null));
   h+=`<div class="set-row"><button class="btn ${namesSaved?'ok':'grad'}" onclick="saveNames()">${namesSaved?'Nimet tallennettu ✓':'Tallenna nimet'}</button></div>`;
+  h+='<div class="set-sec">Sukupuoli & ikä</div>';
+  ['jo','ra'].forEach(p=>{const sx=store.get('sex:'+p,''),ag=store.get('age:'+p,'');const edge=p==='jo'?'#ff5fa2':'#3b82f6';
+    h+=`<div class="set-prof" style="border-left:4px solid ${edge}"><div class="pn" style="${gtext(p)}">${nm(p)}</div>`;
+    h+=`<div style="margin-bottom:9px"><div class="segbtns">`+[['f','Nainen'],['m','Mies'],['x','En halua sanoa']].map(o=>`<button class="segb ${sx===o[0]?'on':''}" onclick="setSex('${p}','${o[0]}')">${o[1]}</button>`).join('')+`</div></div>`;
+    h+=`<div class="set-row"><label>Ikä</label><input type="number" inputmode="numeric" id="age_${p}" value="${ag}" placeholder="vuotta" onchange="setAge('${p}',this.value)" style="max-width:120px"></div>`;
+    h+=`<div class="set-mini">Näiden perusteella saat henkilökohtaiset terveysviitteet. Vapaaehtoisia.</div></div>`;});
   h+='<div class="set-sec">PIN-koodit & Face ID</div>';
   ['jo','ra'].forEach(p=>{const has=lkHas(p),reco=!!store.get('recoQ:'+p,null),face=waHas(p);const edge=p==='jo'?'#ff5fa2':'#3b82f6';
     h+=`<div class="set-prof" style="border-left:4px solid ${edge}"><div class="pn" style="${gtext(p)}">${nm(p)}</div><div class="pbtns"><button class="btn ${has?'ok':'grad'}" onclick="changePin('${p}')">${has?'Vaihda PIN':'Aseta PIN'}</button>`;
@@ -942,7 +978,7 @@ function commitVal(id,v){const x=parseFloat((v||'').replace(',','.'));if(!isNaN(
    EIVÄT koodiin → eivät näy julkisessa GitHub-koodissa. Sovellus puhuu vain Apps Script
    -osoitteelle, joka pääsee vain yhteen taulukkoon (@OnlyCurrentDoc) — ei Driveen.
    Turva-avaimet (PIN, Face ID, palautus) EIVÄT synkkaannu. */
-const SYNC_PREFIXES=['food:','water:','paino:','vyotaro:','lantio:','workouts:','exdef:','hist:','prs:','pend:','goalWeek:','goalBig:','rewards:','wms:','name:','celebday:','badges:','trainGoal:','migr_'];
+const SYNC_PREFIXES=['food:','water:','paino:','vyotaro:','lantio:','workouts:','exdef:','hist:','prs:','pend:','goalWeek:','goalBig:','rewards:','wms:','name:','celebday:','badges:','trainGoal:','sex:','age:','migr_'];
 function syncableKey(k){return SYNC_PREFIXES.some(p=>k.indexOf(p)===0);}
 function syncCfg(){return {url:store.get('syncUrl',''),space:store.get('syncSpace',''),token:store.get('syncToken','')};}
 function syncOn(){const c=syncCfg();return !!(c.url&&c.space);}
