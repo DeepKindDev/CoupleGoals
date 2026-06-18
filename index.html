@@ -135,6 +135,8 @@
   .lk .row input{flex:1;}
   .lenkki-item{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px 14px;margin-bottom:8px;font-size:1.04rem;}
   .lenkki-item .em{font-size:1.3rem;} .lenkki-item .r{margin-left:auto;color:var(--dim);font-size:.98rem;}
+  .lenkki-item .wdel{flex:none;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:4px 6px;margin-left:8px;font-family:inherit;}
+  .lenkki-item .wdel:active{color:var(--warn);}
 
   /* VESI */
   .water-wrap{display:flex;gap:16px;align-items:center;}
@@ -388,7 +390,7 @@ function initData(){
     if(store.get('paino:'+p,null)===null)store.set('paino:'+p,measSeed(SEED_PAINO[p]));
     if(store.get('vyotaro:'+p,null)===null)store.set('vyotaro:'+p,measSeed(SEED_VYO[p]));
     if(store.get('lantio:'+p,null)===null)store.set('lantio:'+p,measSeed(SEED_LANTIO[p]));
-    if(store.get('workouts:'+p,null)===null)store.set('workouts:'+p,[{d:dkey(1),type:'sali',label:'1. treeni'},{d:dkey(3),type:'lenkki',label:'Kävely',min:45,km:4},{d:dkey(5),type:'sali',label:'2. treeni'}]);
+    if(store.get('workouts:'+p,null)===null)store.set('workouts:'+p,[]);
     if(store.get('prs:'+p,null)===null)store.set('prs:'+p,[{d:dkey(2),ex:PROGRAMS[p][1][0].n,w:PROGRAMS[p][1][0].b}]);
     if(store.get('goalWeek:'+p,null)===null)store.set('goalWeek:'+p, p==='jo'?{metric:'sali',target:3,reward:'',earned:false,weekKey:curWeek(),startVal:null,exId:null}:{metric:'ruoka',target:5,reward:'',earned:false,weekKey:curWeek(),startVal:null,exId:null});
     if(store.get('goalBig:'+p,null)===null)store.set('goalBig:'+p, p==='jo'?{metric:'vyotaro',target:80,reward:'',earned:false,startVal:null,exName:null}:{metric:'liike',target:100,reward:'',earned:false,startVal:null,exName:'Penkkipunnerrus'});
@@ -617,8 +619,11 @@ function renderSali(){
     arch.forEach(e=>{h+=`<div class="arch-item"><div class="nm">${e.n}<br><span style="font-size:.92rem">${hist(e.id).length} merkintää tallessa</span></div><button class="btn grad" onclick="restoreEx('${e.id}')">Palauta</button></div>`;});}
   // LENKIT
   h+='<h3 class="sub">Lenkit / liikunta</h3><div class="lk"><div class="amt" style="font-weight:800;color:var(--text)">Tyyppi</div><div class="chips" id="lkTypes"></div><div class="row"><input id="lkMin" type="number" inputmode="numeric" placeholder="Kesto (min)"><input id="lkKm" type="number" inputmode="decimal" placeholder="km (valinn.)"></div><button class="btn grad full" style="margin-top:10px" onclick="addLenkki()">Kirjaa lenkki</button></div>';
-  const recent=store.get('workouts:'+state.person,[]).filter(w=>w.type==='lenkki'&&within(w.d,7)).reverse();
-  if(recent.length){h+='<div class="amt" style="margin:4px 3px 8px">Tällä viikolla:</div>';recent.forEach(w=>{const em=(LENKKI_TYPES.find(t=>t.k===w.label)||{e:'👟'}).e;h+=`<div class="lenkki-item"><span class="em">${em}</span><span>${w.label}</span><span class="r">${w.min?w.min+' min':''}${w.km?' · '+w.km+' km':''}</span></div>`;});}
+  const allw=store.get('workouts:'+state.person,[]);
+  const recent=allw.map((w,i)=>({w,i})).filter(o=>within(o.w.d,14)).reverse();
+  if(recent.length){h+='<div class="amt" style="margin:8px 3px 8px;font-weight:800;color:var(--text)">Viimeaikaiset treenit — poista väärät ✕</div>';
+    recent.forEach(o=>{const w=o.w;const em=w.type==='sali'?'🏋️':(LENKKI_TYPES.find(t=>t.k===w.label)||{e:'👟'}).e;const extra=(w.min?w.min+' min':'')+(w.km?(w.min?' · ':'')+w.km+' km':'');
+      h+=`<div class="lenkki-item"><span class="em">${em}</span><span>${w.label}${w.type==='sali'?' · sali':''}</span><span class="r">${fmtShort(w.d)}${extra?' · '+extra:''}</span><button class="wdel" onclick="deleteWorkout(${o.i})" title="Poista">✕</button></div>`;});}
   h+=`<div class="hint">${state.person==='jo'?'Pepputreeni: tavoite ~2,5 kg/viikko hip thrustiin & jalkaprässiin, kun toistot täyttyvät kivutta.':'Lisää painoa pikkuhiljaa kun toistot täyttyvät hyvällä tekniikalla.'}</div>`;
   document.getElementById('v-sali').innerHTML=h;
   // type chips
@@ -643,6 +648,8 @@ function saveSali(){let prs=[];exDefs().filter(e=>e.active).forEach(e=>{const w=
   setTimeout(()=>{note.textContent='';},2400);checkGoals();renderSali();}
 function addLenkki(){const type=state._lk;if(!type){toast('Valitse lenkin tyyppi');return;}const min=parseInt(document.getElementById('lkMin').value)||0;const km=parseFloat((document.getElementById('lkKm').value||'').replace(',','.'))||0;
   logWorkout('lenkki',type,{min,km:km||undefined});state._lk=null;checkGoals();celebrate('👟 '+type+' kirjattu!');renderSali();}
+function fmtShort(dstr){const a=(dstr||'').split('-');return a.length===3?(a[2]+'.'+a[1]+'.'):dstr;}
+function deleteWorkout(i){const w=store.get('workouts:'+state.person,[]);if(i<0||i>=w.length)return;const x=w[i];if(!confirm('Poistetaanko treeni: '+(x.label||'')+' ('+fmtShort(x.d)+')?'))return;w.splice(i,1);store.set('workouts:'+state.person,w);toast('Treeni poistettu');checkGoals();renderSali();}
 
 /* VESI */
 function waterGoal(){return state.person==='jo'?2000:2500;}
