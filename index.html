@@ -223,6 +223,35 @@
   #dateBanner{flex:none;display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;padding:9px 14px;background:linear-gradient(135deg,color-mix(in srgb,var(--p1) 30%,var(--bg2)),color-mix(in srgb,var(--p2) 24%,var(--bg2)));border-bottom:1px solid var(--line);font-size:.98rem;font-weight:700;color:var(--text);}
   #dateBanner.hidden{display:none;}
   #dateBanner button{background:#fff;color:var(--p1);border:none;border-radius:9px;padding:6px 13px;font-weight:800;font-family:inherit;font-size:.95rem;cursor:pointer;}
+  /* HEATMAP */
+  .hm{display:flex;gap:3px;overflow-x:auto;padding:3px 0 2px;}
+  .hm-col{display:flex;flex-direction:column;gap:3px;}
+  .hm-cell{width:13px;height:13px;border-radius:3px;background:var(--surface2);}
+  .hm-1{background:color-mix(in srgb,var(--p1) 32%,var(--surface2));}
+  .hm-2{background:color-mix(in srgb,var(--p1) 62%,var(--surface));}
+  .hm-3{background:var(--grad);}
+  .hm-legend{display:flex;align-items:center;gap:6px;justify-content:flex-end;font-size:.82rem;color:var(--muted);margin-top:7px;}
+  .hm-legend .hm-cell{width:11px;height:11px;}
+  /* BADGES */
+  .badges{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:4px;}
+  .badge2{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px 12px;}
+  .badge2.locked{opacity:.42;filter:grayscale(.7);}
+  .badge2 .be{font-size:1.7rem;flex:none;}
+  .badge2 .bn{font-weight:700;font-size:.96rem;line-height:1.22;}
+  .togcard{background:linear-gradient(135deg,color-mix(in srgb,var(--p1) 24%,var(--surface)),color-mix(in srgb,var(--p2) 18%,var(--surface)));border:1px solid var(--line);border-radius:15px;padding:14px 16px;display:flex;align-items:center;gap:14px;margin-bottom:6px;}
+  .togcard .tn{font-size:2.2rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1;}
+  /* WRAPPED */
+  #wrapped{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 20px) 18px 20px;background:rgba(0,0,0,.6);overflow-y:auto;}
+  #wrapped.hidden{display:none;}
+  .wr-card{background:linear-gradient(160deg, color-mix(in srgb,var(--p1) 34%,#1a1626), color-mix(in srgb,var(--p2) 26%,#15121f));border:1px solid var(--line);border-radius:20px;padding:22px 20px;width:100%;max-width:420px;margin:auto;text-align:center;}
+  .wr-card h3{font-size:1.4rem;font-weight:800;}
+  .wr-title{font-size:1.2rem;font-weight:800;margin:2px 0 14px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .wr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:10px 0;}
+  .wr-stat{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:13px;padding:12px 10px;}
+  .wr-stat .v{font-size:1.5rem;font-weight:800;}
+  .wr-stat .l{font-size:.84rem;color:var(--dim);margin-top:2px;}
+  .wr-fun{font-size:.96rem;color:var(--dim);margin-top:10px;line-height:1.5;}
+  .wr-card .btn{border:none;border-radius:12px;padding:13px;font-weight:800;font-family:inherit;font-size:1.05rem;cursor:pointer;width:100%;margin-top:14px;background:var(--grad);color:#fff;}
 
   #toast{position:fixed;left:50%;top:72px;transform:translateX(-50%) translateY(-20px);z-index:50;background:var(--grad);color:#fff;font-weight:800;font-size:1.05rem;padding:13px 20px;border-radius:30px;box-shadow:0 8px 26px rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:.28s;max-width:92%;text-align:center;}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -233,6 +262,7 @@
 
 <div id="lock" class="hidden"></div>
 <div id="settings" class="hidden"></div>
+<div id="wrapped" class="hidden"></div>
 
 <header>
   <div class="h-top"><div class="title">CoupleGoals</div><div style="display:flex;align-items:center;gap:4px"><span style="position:relative;display:inline-block"><button class="datebtn" id="dateLbl" title="Vaihda päivää"></button><input type="date" id="datePick" onchange="setDate(this.value)" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;padding:0;margin:0;cursor:pointer;"></span><button class="lockbtn" title="Asetukset" onclick="openSettings()">⚙️</button><button class="lockbtn" title="Lukitse" onclick="lockNow()">🎯</button></div></div>
@@ -377,6 +407,80 @@ function cleanSeeds(){
     [1,2,3].forEach(pr=>PROGRAMS[p][pr].forEach((e,i)=>{const seed=[];if(e.b>0)for(let k=0;k<5;k++)seed.push(Math.round((e.b-12.5+k*2.5)*2)/2);flagSeed('hist:'+p+':p'+pr+'e'+i,seed);}));
   });
 }
+/* ===== HAUSKAT LISÄT: heatmap, wrapped, ennuste, mitalit ===== */
+function goalOf(p){return p==='jo'?2000:2500;}
+function foodCompleteOn(p,d){const f=Object.assign(DEFAULTFOOD(),store.get('food:'+p+':'+d,{}));return !!(f.aamupala&&mealDone(f.lounas)&&mealDone(f.paivallinen));}
+function dayScore(p,off){const d=dkey(off);const wo=store.get('workouts:'+p,[]).some(x=>x.d===d);const wt=store.get('water:'+p+':'+d,0)>=goalOf(p);const fd=foodCompleteOn(p,d);return (wo?1:0)+(wt?1:0)+(fd?1:0);}
+function heatmapCard(){const p=state.person,WEEKS=13,DAYS=WEEKS*7;
+  let cells=[];for(let off=DAYS-1;off>=0;off--){const a=dkey(off).split('-').map(Number);const wd=(new Date(a[0],a[1]-1,a[2]).getDay()+6)%7;cells.push({off,wd,sc:dayScore(p,off)});}
+  let cols=[],cur=null;cells.forEach(c=>{if(c.wd===0||!cur){cur=[null,null,null,null,null,null,null];cols.push(cur);}cur[c.wd]=c;});
+  let h='<h2 class="sec">Aktiivisuus</h2><div class="card"><div class="hm">';
+  cols.forEach(col=>{h+='<div class="hm-col">';for(let r=0;r<7;r++){const c=col[r];h+=c?`<div class="hm-cell hm-${c.sc}"></div>`:'<div class="hm-cell" style="background:transparent"></div>';}h+='</div>';});
+  h+='</div><div class="hm-legend">vähemmän <span class="hm-cell hm-0"></span><span class="hm-cell hm-1"></span><span class="hm-cell hm-2"></span><span class="hm-cell hm-3"></span> enemmän</div></div>';
+  return h;
+}
+function wrappedData(p){const N=30;let sali=0,lenkki=0,km=0,water=0;
+  store.get('workouts:'+p,[]).forEach(x=>{if(within(x.d,N)){if(x.type==='sali')sali++;else if(x.type==='lenkki'){lenkki++;km+=x.km||0;}}});
+  for(let i=0;i<N;i++)water+=store.get('water:'+p+':'+dkey(i),0);
+  const prs=store.get('prs:'+p,[]).filter(x=>within(x.d,N));const bestPR=prs.length?prs.reduce((a,b)=>b.w>a.w?b:a):null;
+  return {sali,lenkki,km:Math.round(km*10)/10,waterL:Math.round(water/100)/10,bestPR,streak:streakOf(p),N};
+}
+function wrappedTitle(d){const arr=[['Salisankari 🏋️',d.sali*3],['Lenkkilegenda 👟',d.km],['Vesipeto 💧',d.waterL],['Putkimestari 🔥',d.streak*4]];arr.sort((a,b)=>b[1]-a[1]);return arr[0][1]>0?arr[0][0]:'Hyvä alku! ✨';}
+function openWrapped(){const p=state.person,d=wrappedData(p),o=p==='jo'?'ra':'jo',od=wrappedData(o);
+  const ammeet=(d.waterL/150);const ratakierros=Math.round(d.km*1000/400);
+  let fun=[];if(d.waterL>0)fun.push(`Joit ${d.waterL.toString().replace('.',',')} l vettä — n. ${ammeet.toFixed(1).replace('.',',')} kylpyammeellista.`);
+  if(d.km>0)fun.push(`Lenkkeilit ${d.km.toString().replace('.',',')} km — n. ${ratakierros} kierrosta juoksuradalla.`);
+  const yhteisKm=Math.round((d.km+od.km)*10)/10,yhteisL=Math.round((d.waterL+od.waterL)*10)/10;
+  let h='<div class="wr-card"><h3>✨ CoupleGoals Wrapped</h3><div class="wr-title">'+wrappedTitle(d)+'</div>';
+  h+='<div class="wr-grid">';
+  h+=`<div class="wr-stat"><div class="v">${d.sali}</div><div class="l">🏋️ salitreeniä</div></div>`;
+  h+=`<div class="wr-stat"><div class="v">${d.lenkki}</div><div class="l">👟 lenkkiä · ${d.km.toString().replace('.',',')} km</div></div>`;
+  h+=`<div class="wr-stat"><div class="v">${d.waterL.toString().replace('.',',')} l</div><div class="l">💧 vettä</div></div>`;
+  h+=`<div class="wr-stat"><div class="v">${d.streak}</div><div class="l">🔥 päivän putki</div></div>`;
+  h+='</div>';
+  if(d.bestPR)h+=`<div class="wr-fun">⭐ Paras ennätys: <b>${d.bestPR.ex} ${d.bestPR.w} kg</b></div>`;
+  h+=`<div class="wr-fun">💞 Yhdessä: ${yhteisKm.toString().replace('.',',')} km ja ${yhteisL.toString().replace('.',',')} l vettä.</div>`;
+  if(fun.length)h+='<div class="wr-fun">'+fun.join('<br>')+'</div>';
+  h+='<div class="wr-fun" style="font-size:.82rem;opacity:.8">Viimeiset 30 päivää</div>';
+  h+='<button class="btn" onclick="closeWrapped()">Sulje</button></div>';
+  document.getElementById('wrapped').innerHTML=h;document.getElementById('wrapped').classList.remove('hidden');confetti(true);}
+function closeWrapped(){document.getElementById('wrapped').classList.add('hidden');}
+function dayNum(dstr){const a=dstr.split('-').map(Number);return Math.floor(new Date(a[0],a[1]-1,a[2]).getTime()/86400000);}
+function regr(pts){const n=pts.length;if(n<2)return null;let st=0,sw=0,stt=0,stw=0;pts.forEach(p=>{st+=p.t;sw+=p.w;stt+=p.t*p.t;stw+=p.t*p.w;});const den=n*stt-st*st;if(den===0)return null;const slope=(n*stw-st*sw)/den;return {slope,intercept:(sw-slope*st)/n};}
+function predictGoal(scope,g){const m=metricDef(scope,g.metric);if(!m||!(g.target>0))return '';
+  let series=null;
+  if(g.metric==='paino')series=store.get('paino:'+state.person,[]);
+  else if(g.metric==='vyotaro')series=store.get('vyotaro:'+state.person,[]);
+  else if(g.metric==='liike'&&g.exName){series=[];[1,2,3].forEach(pr=>store.get('exdef:'+state.person+':'+pr,[]).forEach(e=>{if(e.n===g.exName)series=series.concat(hist(e.id));}));}
+  if(!series)return '';
+  const pts=series.filter(x=>x&&!x.demo&&x.w!=null).map(x=>({t:dayNum(x.d),w:x.w}));
+  if(pts.length<2)return '';
+  const r=regr(pts);if(!r||r.slope===0)return '';
+  const toward=m.dir==='down'?r.slope<0:r.slope>0;
+  if(!toward)return '🔮 Ennuste: nykytrendi ei vielä vie tavoitteeseen.';
+  const tTarget=(g.target-r.intercept)/r.slope,lastT=pts[pts.length-1].t,days=Math.ceil(tTarget-lastT);
+  if(days<=0)return '🔮 Ennuste: tavoite on jo käden ulottuvilla!';
+  if(days>3650)return '';
+  const dt=new Date(Date.now()+days*86400000);
+  return `🔮 Ennuste: tällä vauhdilla ~${dt.getDate()}.${dt.getMonth()+1}.${dt.getFullYear()} (n. ${days} pv).`;
+}
+/* MITALIT & YHTEISPÄIVÄT */
+function countType(p,t){return store.get('workouts:'+p,[]).filter(x=>x.type===t).length;}
+function totalKm(p){return store.get('workouts:'+p,[]).reduce((a,x)=>a+(x.km||0),0);}
+function totalWaterL(p){let s=0;for(let i=0;i<200;i++)s+=store.get('water:'+p+':'+dkey(i),0);return s/1000;}
+function hipGain(p){const a=(store.get('lantio:'+p,[])||[]).filter(x=>!x.demo);return a.length>=2?a[a.length-1].w-a[0].w:0;}
+function togetherDays(){let c=0;for(let i=0;i<90;i++){const d=dkey(i);if(store.get('celebday:jo:'+d,false)&&store.get('celebday:ra:'+d,false))c++;}return c;}
+const BADGES=[
+  {id:'w10',e:'🏋️',n:'10 salitreeniä',c:p=>countType(p,'sali')>=10},
+  {id:'w25',e:'🏋️',n:'25 salitreeniä',c:p=>countType(p,'sali')>=25},
+  {id:'km50',e:'👟',n:'50 km lenkkejä',c:p=>totalKm(p)>=50},
+  {id:'water100',e:'💧',n:'100 l vettä',c:p=>totalWaterL(p)>=100},
+  {id:'pr1',e:'⭐',n:'Ensimmäinen ennätys',c:p=>store.get('prs:'+p,[]).length>=1},
+  {id:'streak7',e:'🔥',n:'7 päivän putki',c:p=>streakOf(p)>=7},
+  {id:'hip2',e:'🍑',n:'Lantio +2 cm',c:p=>p==='jo'&&hipGain(p)>=2},
+  {id:'tog10',e:'💞',n:'10 yhteispäivää',c:()=>togetherDays()>=10}
+];
+function checkBadges(){['jo','ra'].forEach(p=>{const have=store.get('badges:'+p,[]);let added=false;BADGES.forEach(b=>{if(have.indexOf(b.id)<0&&b.c(p)){have.push(b.id);added=true;if(p===state.person)celebrate('🏅 Uusi mitali: '+b.e+' '+b.n+'!',true);}});if(added)store.set('badges:'+p,have);});}
 function pendingWeight(id){return store.get('pend:'+state.person+':'+id,curWeight(id));}
 function setPending(id,w){store.set('pend:'+state.person+':'+id,w);}
 
@@ -592,7 +696,7 @@ function checkGoals(){['week','big'].forEach(scope=>{const key=(scope==='week'?'
   if(scope==='week'){const cw=curWeek();if(g.weekKey!==cw){g.weekKey=cw;g.earned=false;store.set(key,g);}}
   const r=evalGoal(scope,g);if(r&&r.reached&&!g.earned){g.earned=true;store.set(key,g);celebrate('🎉 '+(scope==='week'?'Viikkotavoite':'Iso tavoite')+' saavutettu'+(g.reward?': '+g.reward+' 🎁':'!'),true);
     if(g.reward&&g.reward.trim()){const rl=store.get('rewards:'+state.person,[]);rl.push({id:'r'+Date.now()+Math.floor(Math.random()*1000),text:g.reward.trim(),scope,label:(scope==='week'?'Viikkotavoite':'Iso tavoite'),d:state.date,redeemed:false});store.set('rewards:'+state.person,rl);}
-  }});}
+  }});if(typeof checkBadges==='function')checkBadges();}
 function redeemReward(id){const rl=store.get('rewards:'+state.person,[]);const r=rl.find(x=>x.id===id);if(r){r.redeemed=true;r.redeemedD=state.date;store.set('rewards:'+state.person,rl);}toast('🎁 Palkinto lunastettu — nauttikaa!');renderPalkinnot();}
 function unredeemReward(id){const rl=store.get('rewards:'+state.person,[]);const r=rl.find(x=>x.id===id);if(r){r.redeemed=false;store.set('rewards:'+state.person,rl);}renderPalkinnot();}
 function renderPalkinnot(){
@@ -604,6 +708,13 @@ function renderPalkinnot(){
   h+=`<div class="archive-head" onclick="state.showRedeemed=!state.showRedeemed;renderPalkinnot()"><span>✅ Lunastetut (${done.length})</span><span>${state.showRedeemed?'▲':'▼'}</span></div>`;
   if(state.showRedeemed){if(!done.length)h+='<div class="amt" style="padding:9px 3px">Ei vielä lunastettuja palkintoja.</div>';
     done.forEach(r=>{h+=`<div class="rw"><div style="flex:1"><div style="font-weight:700;font-size:1.06rem">✔ ${r.text}</div><div style="font-size:.92rem;color:var(--dim);margin-top:2px">lunastettu ${r.redeemedD||''}</div></div><button class="btn ghost" onclick="unredeemReward('${r.id}')">Palauta</button></div>`;});}
+  checkBadges();
+  const td=togetherDays();
+  h+='<h2 class="sec">Yhteispäivät</h2><div class="togcard"><div class="tn">'+td+'</div><div><div style="font-weight:800;font-size:1.05rem">päivää yhdessä putkessa kunnossa 💞</div><div style="font-size:.9rem;color:var(--dim);margin-top:2px">päivät joina molemmat saitte ruoat & veden kohdilleen (90 pv)</div></div></div>';
+  const have=store.get('badges:'+state.person,[]);
+  h+='<h2 class="sec">Mitalit ('+have.length+'/'+BADGES.length+')</h2><div class="badges">';
+  BADGES.forEach(b=>{const got=have.indexOf(b.id)>=0;h+=`<div class="badge2 ${got?'':'locked'}"><span class="be">${got?b.e:'🔒'}</span><span class="bn">${b.n}</span></div>`;});
+  h+='</div>';
   document.getElementById('v-palkinnot').innerHTML=h;
 }
 
@@ -618,10 +729,10 @@ function goalEditor(scope){
   const key=(scope==='week'?'goalWeek:':'goalBig:')+state.person;const g=store.get(key,null);if(!g)return '';
   const metrics=scope==='week'?WEEK_METRICS:BIG_METRICS;const r=evalGoal(scope,g);const md=metricDef(scope,g.metric);
   let h='<div class="card">';
-  if(r){const exName=g.exName?(' · '+g.exName):'';
+  if(r){const exName=g.exName?(' · '+g.exName):'';const pred=r.reached?'':predictGoal(scope,g);
     h+=`<div class="goal-prog"><div class="gp-top"><span>${r.m.label}${exName}</span><span>${r.cur==null?'–':r.cur} / ${g.target} ${r.m.unit}</span></div>
       <div class="bar"><div class="bar-fill" style="width:${r.pct}%"></div></div>
-      <div class="gp-st">${g.reward?(r.reached?'🎁 Saavutettu: '+g.reward:'🔒 Palkinto: '+g.reward):'Aseta palkinto alle 👇'}</div></div>`;}
+      <div class="gp-st">${g.reward?(r.reached?'🎁 Saavutettu: '+g.reward:'🔒 Palkinto: '+g.reward):'Aseta palkinto alle 👇'}</div>${pred?`<div class="gp-st" style="margin-top:3px">${pred}</div>`:''}</div>`;}
   h+='<div class="amt" style="font-weight:800;color:var(--text);margin-top:13px">Mitä tavoittelet?</div><div class="chips">';
   metrics.forEach(m=>h+=`<div class="chip ${g.metric===m.k?'sel':''}" onclick="setGoalMetric('${scope}','${m.k}')"><span>${m.label}</span></div>`);
   h+='</div>';
@@ -668,10 +779,10 @@ function logMeasures(){const pv=parseFloat((document.getElementById('mP').value|
   if(!isNaN(vv)){let vh=store.get('vyotaro:'+state.person,[]);if(isDemoArr(vh))vh=[];const i=vh.findIndex(x=>x.d===state.date);if(i>=0)vh[i].w=vv;else vh.push({d:state.date,w:vv});store.set('vyotaro:'+state.person,vh);}
   const mlEl=document.getElementById('mL');
   if(mlEl){const lv=parseFloat((mlEl.value||'').replace(',','.'));if(!isNaN(lv)){let lh=store.get('lantio:'+state.person,[]);if(isDemoArr(lh))lh=[];const i=lh.findIndex(x=>x.d===state.date);if(i>=0)lh[i].w=lv;else lh.push({d:state.date,w:lv});store.set('lantio:'+state.person,lh);}}
-  toast('📏 Mitat kirjattu!');renderEdist();}
+  toast('📏 Mitat kirjattu!');checkBadges();renderEdist();}
 function renderEdist(){
   checkGoals();
-  let h=partnerCard()+weeklyCard()+goalsCard()+measuresCard()+monthlyCard();
+  let h=partnerCard()+'<button class="btn grad full" style="margin:2px 0 14px" onclick="openWrapped()">✨ Näytä CoupleGoals Wrapped</button>'+weeklyCard()+heatmapCard()+goalsCard()+measuresCard()+monthlyCard();
   h+='<h2 class="sec">Liikkeiden kehitys</h2>';
   const act=exDefs().filter(e=>e.active);
   act.forEach(e=>{h+=`<div class="chartbox"><h4>${e.n} <span style="font-size:.9rem;color:var(--muted);font-weight:600">— ${e.sets}×${e.reps}</span>${demoTag(hist(e.id))}</h4><div id="pc_${e.id}"></div></div>`;});
@@ -764,7 +875,8 @@ function renderSettings(){const S=document.getElementById('settings');const waOk
   h+='<div class="set-sec">Nimet</div>';
   h+=`<div class="set-row" style="border-left:4px solid #ff5fa2;border-radius:0;padding-left:10px"><label style="${gtext('jo')}">Profiili 1</label><input type="text" id="snJo" value="${esc(store.get('name:jo',''))}" placeholder="Kirjoita nimi"></div>`;
   h+=`<div class="set-row" style="border-left:4px solid #3b82f6;border-radius:0;padding-left:10px"><label style="${gtext('ra')}">Profiili 2</label><input type="text" id="snRa" value="${esc(store.get('name:ra',''))}" placeholder="Kirjoita nimi"></div>`;
-  h+='<div class="set-row"><button class="btn grad" onclick="saveNames()">Tallenna nimet</button></div>';
+  const namesSaved=!!(store.get('name:jo',null)||store.get('name:ra',null));
+  h+=`<div class="set-row"><button class="btn ${namesSaved?'ok':'grad'}" onclick="saveNames()">${namesSaved?'Nimet tallennettu ✓':'Tallenna nimet'}</button></div>`;
   h+='<div class="set-sec">PIN-koodit & Face ID</div>';
   ['jo','ra'].forEach(p=>{const has=lkHas(p),reco=!!store.get('recoQ:'+p,null),face=waHas(p);const edge=p==='jo'?'#ff5fa2':'#3b82f6';
     h+=`<div class="set-prof" style="border-left:4px solid ${edge}"><div class="pn" style="${gtext(p)}">${nm(p)}</div><div class="pbtns"><button class="btn ${has?'ok':'grad'}" onclick="changePin('${p}')">${has?'Vaihda PIN':'Aseta PIN'}</button>`;
@@ -778,7 +890,7 @@ function renderSettings(){const S=document.getElementById('settings');const waOk
   h+=`<div class="set-row"><input type="text" id="syUrl" value="${esc(store.get('syncUrl',''))}" placeholder="Apps Script -verkkosovelluksen URL"></div>`;
   h+=`<div class="set-row"><input type="text" id="sySpace" value="${esc(store.get('syncSpace',''))}" placeholder="Tila-avain (sama molemmilla, esim. meidan-koti)"></div>`;
   h+=`<div class="set-row"><input type="text" id="syToken" value="${esc(store.get('syncToken',''))}" placeholder="Salasana (sama kuin skriptissä)"></div>`;
-  h+='<div class="pbtns"><button class="btn grad" onclick="saveSync()">Tallenna</button><button class="btn ok" onclick="syncPull()">⬇︎ Hae nyt</button><button class="btn ok" onclick="syncPush()">⬆︎ Lähetä nyt</button></div>';
+  h+=`<div class="pbtns"><button class="btn ${syncOn()?'ok':'grad'}" onclick="saveSync()">${syncOn()?'Tallennettu ✓':'Tallenna'}</button><button class="btn ok" onclick="syncPull()">⬇︎ Hae nyt</button><button class="btn ok" onclick="syncPush()">⬆︎ Lähetä nyt</button></div>`;
   h+=`<div class="set-mini" style="margin-top:8px">${syncOn()?'✅ Automaattisynkka päällä — tiedot haetaan sovellusta avatessa ja lähetetään automaattisesti kirjausten jälkeen.':'Täytä kentät ja Tallenna, niin synkka muuttuu automaattiseksi.'} ${last?('Viimeksi: '+new Date(last).toLocaleString('fi-FI')):''}</div></div>`;
   h+='<button class="btn grad" style="width:100%" onclick="closeSettings()">Sulje</button></div>';
   S.innerHTML=h;}
@@ -790,7 +902,7 @@ function commitVal(id,v){const x=parseFloat((v||'').replace(',','.'));if(!isNaN(
    EIVÄT koodiin → eivät näy julkisessa GitHub-koodissa. Sovellus puhuu vain Apps Script
    -osoitteelle, joka pääsee vain yhteen taulukkoon (@OnlyCurrentDoc) — ei Driveen.
    Turva-avaimet (PIN, Face ID, palautus) EIVÄT synkkaannu. */
-const SYNC_PREFIXES=['food:','water:','paino:','vyotaro:','lantio:','workouts:','exdef:','hist:','prs:','pend:','goalWeek:','goalBig:','rewards:','wms:','name:','celebday:','migr_'];
+const SYNC_PREFIXES=['food:','water:','paino:','vyotaro:','lantio:','workouts:','exdef:','hist:','prs:','pend:','goalWeek:','goalBig:','rewards:','wms:','name:','celebday:','badges:','migr_'];
 function syncableKey(k){return SYNC_PREFIXES.some(p=>k.indexOf(p)===0);}
 function syncCfg(){return {url:store.get('syncUrl',''),space:store.get('syncSpace',''),token:store.get('syncToken','')};}
 function syncOn(){const c=syncCfg();return !!(c.url&&c.space);}
