@@ -24,7 +24,7 @@
   body.jo{ --p1:#b15cff; --p2:#ff5fa2; --grad:linear-gradient(135deg,#b15cff,#ff5fa2); }
   body.ra{ --p1:#22d3c5; --p2:#3b82f6; --grad:linear-gradient(135deg,#22d3c5,#3b82f6); }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html,body{margin:0;height:100%;}
+  html,body{margin:0;height:100%;width:100%;max-width:100%;overflow-x:hidden;overscroll-behavior:none;}
   body{background:var(--bg);color:var(--text);height:100dvh;display:flex;flex-direction:column;overflow:hidden;
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;font-size:19px;
     background-image:radial-gradient(120% 60% at 50% -10%, color-mix(in srgb,var(--p1) 26%, transparent), transparent 70%);}
@@ -338,11 +338,11 @@ function initData(){
     [1,2,3].forEach(pr=>{
       const dk='exdef:'+p+':'+pr;
       if(!store.get(dk,null)) store.set(dk, PROGRAMS[p][pr].map((e,i)=>({id:'p'+pr+'e'+i,n:e.n,sets:e.sets,reps:e.reps,active:true})));
-      PROGRAMS[p][pr].forEach((e,i)=>{const hk='hist:'+p+':p'+pr+'e'+i;if(store.get(hk,null)===null){let h=[];if(e.b>0)for(let k=0;k<5;k++)h.push({d:dkey((5-k)*4),w:Math.round((e.b-12.5+k*2.5)*2)/2});store.set(hk,h);}});
+      PROGRAMS[p][pr].forEach((e,i)=>{const hk='hist:'+p+':p'+pr+'e'+i;if(store.get(hk,null)===null){let h=[];if(e.b>0)for(let k=0;k<5;k++)h.push({d:dkey((5-k)*4),w:Math.round((e.b-12.5+k*2.5)*2)/2,demo:true});store.set(hk,h);}});
     });
-    if(store.get('paino:'+p,null)===null)store.set('paino:'+p,SEED_PAINO[p].map((w,k)=>({d:dkey((5-k)*6),w})));
-    if(store.get('vyotaro:'+p,null)===null)store.set('vyotaro:'+p,SEED_VYO[p].map((w,k)=>({d:dkey((5-k)*6),w})));
-    if(p==='jo'&&store.get('lantio:'+p,null)===null)store.set('lantio:'+p,SEED_LANTIO[p].map((w,k)=>({d:dkey((5-k)*6),w})));
+    if(store.get('paino:'+p,null)===null)store.set('paino:'+p,SEED_PAINO[p].map((w,k)=>({d:dkey((5-k)*6),w,demo:true})));
+    if(store.get('vyotaro:'+p,null)===null)store.set('vyotaro:'+p,SEED_VYO[p].map((w,k)=>({d:dkey((5-k)*6),w,demo:true})));
+    if(p==='jo'&&store.get('lantio:'+p,null)===null)store.set('lantio:'+p,SEED_LANTIO[p].map((w,k)=>({d:dkey((5-k)*6),w,demo:true})));
     if(store.get('workouts:'+p,null)===null)store.set('workouts:'+p,[{d:dkey(1),type:'sali',label:'1. treeni'},{d:dkey(3),type:'lenkki',label:'Kävely',min:45,km:4},{d:dkey(5),type:'sali',label:'2. treeni'}]);
     if(store.get('prs:'+p,null)===null)store.set('prs:'+p,[{d:dkey(2),ex:PROGRAMS[p][1][0].n,w:PROGRAMS[p][1][0].b}]);
     if(store.get('goalWeek:'+p,null)===null)store.set('goalWeek:'+p, p==='jo'?{metric:'sali',target:3,reward:'',earned:false,weekKey:curWeek(),startVal:null,exId:null}:{metric:'ruoka',target:5,reward:'',earned:false,weekKey:curWeek(),startVal:null,exId:null});
@@ -351,6 +351,9 @@ function initData(){
   });
   // Oletustoistot 3x8: yhtenäistetään olemassa olevat liikkeet kerran
   if(!store.get('migr_reps8',false)){['jo','ra'].forEach(p=>[1,2,3].forEach(pr=>{const k='exdef:'+p+':'+pr;const d=store.get(k,null);if(d&&d.length){d.forEach(e=>{e.reps='8';if(!e.sets)e.sets=3;});store.set(k,d);}}));store.set('migr_reps8',true);}
+  // Esikatseludata: merkitse vanhat siemenpisteet demoksi; jos sarjaan on jo kirjattu
+  // oikea tulos, poista demot (oma data säilyy). Pelkkä siemensarja jää esikatseluksi.
+  cleanSeeds();
 }
 function exDefs(){return store.get('exdef:'+state.person+':'+state.prog,[]);}
 function setExDefs(d){store.set('exdef:'+state.person+':'+state.prog,d);}
@@ -359,6 +362,21 @@ function hist(id){return store.get('hist:'+state.person+':'+id,[]);}
 function setHist(id,h){store.set('hist:'+state.person+':'+id,h);}
 function curWeight(id){const h=hist(id);return h.length?h[h.length-1].w:0;}
 function maxWeight(id){const h=hist(id);return h.length?Math.max(...h.map(x=>x.w)):0;}
+function isDemoArr(a){return !!(a&&a.length&&a.every(x=>x&&x.demo));}
+function demoTag(a){return isDemoArr(a)?' <span style="font-size:.78rem;font-weight:600;color:var(--muted)">· esikatselu</span>':'';}
+function cleanSeeds(){
+  const flagSeed=(key,vals)=>{let a=store.get(key,null);if(!a||!a.length)return;
+    const n=Math.min(vals.length,a.length);
+    for(let k=0;k<n;k++){if(a[k]&&!('demo'in a[k])&&Math.abs(a[k].w-vals[k])<0.01)a[k].demo=true;}
+    if(a.some(x=>!x.demo))a=a.filter(x=>!x.demo);
+    store.set(key,a);};
+  ['jo','ra'].forEach(p=>{
+    flagSeed('paino:'+p,SEED_PAINO[p]);
+    flagSeed('vyotaro:'+p,SEED_VYO[p]);
+    if(p==='jo')flagSeed('lantio:'+p,SEED_LANTIO[p]);
+    [1,2,3].forEach(pr=>PROGRAMS[p][pr].forEach((e,i)=>{const seed=[];if(e.b>0)for(let k=0;k<5;k++)seed.push(Math.round((e.b-12.5+k*2.5)*2)/2);flagSeed('hist:'+p+':p'+pr+'e'+i,seed);}));
+  });
+}
 function pendingWeight(id){return store.get('pend:'+state.person+':'+id,curWeight(id));}
 function setPending(id,w){store.set('pend:'+state.person+':'+id,w);}
 
@@ -485,7 +503,7 @@ function archiveEx(id){const d=exDefs();d.find(x=>x.id===id).active=false;setExD
 function restoreEx(id){const d=exDefs();d.find(x=>x.id===id).active=true;setExDefs(d);toast('Liike palautettu historioineen');renderSali();}
 function addEx(){const n=document.getElementById('adN').value.trim();if(!n){toast('Anna liikkeen nimi');return;}const ro=document.getElementById('adRO');const d=exDefs(),id='c'+Date.now();d.push({id,n,sets:parseInt(document.getElementById('adS').value)||3,reps:document.getElementById('adR').value.trim()||'8',active:true,repsOnly:!!(ro&&ro.checked)});setExDefs(d);setHist(id,[]);state.adding=false;renderSali();}
 function logWorkout(type,label,extra){const w=store.get('workouts:'+state.person,[]);if(type==='sali'&&w.some(x=>x.d===state.date&&x.type==='sali'))return;w.push(Object.assign({d:state.date,type,label},extra||{}));store.set('workouts:'+state.person,w);}
-function saveSali(){let prs=[];exDefs().filter(e=>e.active).forEach(e=>{const w=pendingWeight(e.id);if(w<=0)return;const mx=maxWeight(e.id),h=hist(e.id),i=h.findIndex(x=>x.d===state.date);if(i>=0)h[i].w=w;else h.push({d:state.date,w});setHist(e.id,h);if(w>mx&&mx>0){prs.push(e.n+' '+w+' '+(e.repsOnly?'toistoa':'kg'));const pl=store.get('prs:'+state.person,[]);pl.push({d:state.date,ex:e.n,w});store.set('prs:'+state.person,pl);}});
+function saveSali(){let prs=[];exDefs().filter(e=>e.active).forEach(e=>{const w=pendingWeight(e.id);if(w<=0)return;let h=hist(e.id);if(isDemoArr(h))h=[];const mx=h.length?Math.max(...h.map(x=>x.w)):0,i=h.findIndex(x=>x.d===state.date);if(i>=0)h[i].w=w;else h.push({d:state.date,w});setHist(e.id,h);if(w>mx&&mx>0){prs.push(e.n+' '+w+' '+(e.repsOnly?'toistoa':'kg'));const pl=store.get('prs:'+state.person,[]);pl.push({d:state.date,ex:e.n,w});store.set('prs:'+state.person,pl);}});
   logWorkout('sali',PROG_META[state.prog].l);const note=document.getElementById('saliNote');
   if(prs.length){celebrate('★ Uusi ennätys: '+prs[0]+(prs.length>1?` (+${prs.length-1})`:'')+'!',true);note.textContent='✓ Tallennettu — uusi ennätys!';}
   else{toast('💪 Salitreeni tallennettu!');note.textContent='✓ Tallennettu — synkkaa Sheetiin vaiheessa 2';}
@@ -635,28 +653,28 @@ function measuresCard(){
   let h=`<h2 class="sec">Paino & mitat</h2><div class="mt card"><div class="row"><label>Paino kg</label><input id="mP" type="number" inputmode="decimal" value="${lastP}" placeholder="esim. 65,5"></div><div class="row"><label>Vyötärö cm</label><input id="mV" type="number" inputmode="decimal" value="${lastV}" placeholder="esim. 84"></div>`;
   if(isJo)h+=`<div class="row"><label>Lantio cm</label><input id="mL" type="number" inputmode="decimal" value="${lastL}" placeholder="esim. 100"></div>`;
   h+='<button class="btn grad full" style="margin-top:11px" onclick="logMeasures()">Kirjaa tänään</button></div>';
-  h+='<div class="chartbox"><h4>Painokäyrä (kg)</h4><div id="mc_p"></div></div>';
-  h+=`<div class="chartbox"><h4>Vyötärö (cm)</h4><div id="mc_v"></div></div>`;
-  if(isJo){h+=`<div class="chartbox"><h4>Lantio (cm)</h4><div id="mc_l"></div></div>`;
+  h+=`<div class="chartbox"><h4>Painokäyrä (kg)${demoTag(ph)}</h4><div id="mc_p"></div></div>`;
+  h+=`<div class="chartbox"><h4>Vyötärö (cm)${demoTag(vh)}</h4><div id="mc_v"></div></div>`;
+  if(isJo){h+=`<div class="chartbox"><h4>Lantio (cm)${demoTag(lh)}</h4><div id="mc_l"></div></div>`;
     const vMap={};vh.forEach(x=>vMap[x.d]=x.w);const wlist=[];lh.forEach(x=>{if(vMap[x.d]!=null&&x.w>0)wlist.push(vMap[x.d]/x.w);});
     const curW=wlist.length?wlist[wlist.length-1]:null,prevW=wlist.length>1?wlist[wlist.length-2]:null;
     const fmt=v=>v==null?'–':v.toFixed(2).replace('.',',');
     let trend='';if(curW!=null&&prevW!=null){const d=curW-prevW;if(d<0)trend=` <span style="color:var(--gold)">▼ ${Math.abs(d).toFixed(2).replace('.',',')} 🍑</span>`;else if(d>0)trend=` <span style="color:#ff8a8a">▲ ${d.toFixed(2).replace('.',',')}</span>`;else trend=' ±0';}
-    h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><div style="font-weight:800;font-size:1.04rem">Vyötärö-lantio-suhde</div><div style="font-size:.92rem;color:var(--dim);margin-top:2px">pienempi = peppuvoitto 🍑</div></div><div style="font-weight:800;font-size:2.1rem;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">${fmt(curW)}</div></div>${trend?`<div style="margin-top:8px;font-size:.95rem;font-weight:700;color:var(--dim)">edellisestä mittauksesta:${trend}</div>`:''}</div>`;}
+    h+=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><div style="font-weight:800;font-size:1.04rem">Vyötärö-lantio-suhde</div><div style="font-size:.92rem;color:var(--dim);margin-top:2px">pienempi = peppuvoitto 🍑${(isDemoArr(lh)&&isDemoArr(vh))?' · esikatselu':''}</div></div><div style="font-weight:800;font-size:2.1rem;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent">${fmt(curW)}</div></div>${trend?`<div style="margin-top:8px;font-size:.95rem;font-weight:700;color:var(--dim)">edellisestä mittauksesta:${trend}</div>`:''}</div>`;}
   return h;
 }
 function logMeasures(){const pv=parseFloat((document.getElementById('mP').value||'').replace(',','.'));const vv=parseFloat((document.getElementById('mV').value||'').replace(',','.'));
-  if(!isNaN(pv)){const ph=store.get('paino:'+state.person,[]);const i=ph.findIndex(x=>x.d===state.date);if(i>=0)ph[i].w=pv;else ph.push({d:state.date,w:pv});store.set('paino:'+state.person,ph);}
-  if(!isNaN(vv)){const vh=store.get('vyotaro:'+state.person,[]);const i=vh.findIndex(x=>x.d===state.date);if(i>=0)vh[i].w=vv;else vh.push({d:state.date,w:vv});store.set('vyotaro:'+state.person,vh);}
+  if(!isNaN(pv)){let ph=store.get('paino:'+state.person,[]);if(isDemoArr(ph))ph=[];const i=ph.findIndex(x=>x.d===state.date);if(i>=0)ph[i].w=pv;else ph.push({d:state.date,w:pv});store.set('paino:'+state.person,ph);}
+  if(!isNaN(vv)){let vh=store.get('vyotaro:'+state.person,[]);if(isDemoArr(vh))vh=[];const i=vh.findIndex(x=>x.d===state.date);if(i>=0)vh[i].w=vv;else vh.push({d:state.date,w:vv});store.set('vyotaro:'+state.person,vh);}
   const mlEl=document.getElementById('mL');
-  if(mlEl){const lv=parseFloat((mlEl.value||'').replace(',','.'));if(!isNaN(lv)){const lh=store.get('lantio:'+state.person,[]);const i=lh.findIndex(x=>x.d===state.date);if(i>=0)lh[i].w=lv;else lh.push({d:state.date,w:lv});store.set('lantio:'+state.person,lh);}}
+  if(mlEl){const lv=parseFloat((mlEl.value||'').replace(',','.'));if(!isNaN(lv)){let lh=store.get('lantio:'+state.person,[]);if(isDemoArr(lh))lh=[];const i=lh.findIndex(x=>x.d===state.date);if(i>=0)lh[i].w=lv;else lh.push({d:state.date,w:lv});store.set('lantio:'+state.person,lh);}}
   toast('📏 Mitat kirjattu!');renderEdist();}
 function renderEdist(){
   checkGoals();
   let h=partnerCard()+weeklyCard()+goalsCard()+measuresCard()+monthlyCard();
   h+='<h2 class="sec">Liikkeiden kehitys</h2>';
   const act=exDefs().filter(e=>e.active);
-  act.forEach(e=>{h+=`<div class="chartbox"><h4>${e.n} <span style="font-size:.9rem;color:var(--muted);font-weight:600">— ${e.sets}×${e.reps}</span></h4><div id="pc_${e.id}"></div></div>`;});
+  act.forEach(e=>{h+=`<div class="chartbox"><h4>${e.n} <span style="font-size:.9rem;color:var(--muted);font-weight:600">— ${e.sets}×${e.reps}</span>${demoTag(hist(e.id))}</h4><div id="pc_${e.id}"></div></div>`;});
   document.getElementById('v-edist').innerHTML=h;
   // draw measure charts
   const ph=store.get('paino:'+state.person,[]),vh=store.get('vyotaro:'+state.person,[]),lh=store.get('lantio:'+state.person,[]);
@@ -788,7 +806,7 @@ async function syncPush(silent){if(!syncOn()){if(!silent)toast('Täytä synkka-a
 async function syncPull(silent){if(!syncOn()){if(!silent)toast('Täytä synkka-asetukset ensin');return;}const c=syncCfg();
   try{const res=await fetch(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'pull',space:c.space,token:c.token})});
     const j=await res.json();
-    if(j.ok&&j.data){syncSuppress=true;Object.keys(j.data).forEach(k=>{if(syncableKey(k)){try{localStorage.setItem(k,j.data[k]);delete mem[k];}catch(e){}}});store.set('syncLast',Date.now());syncSuppress=false;if(!silent)toast('⬇︎ Haettu pilvestä');refreshNames();updateDateLabel();renderDateBanner();renderActive();if(!document.getElementById('settings').classList.contains('hidden'))renderSettings();}
+    if(j.ok&&j.data){syncSuppress=true;Object.keys(j.data).forEach(k=>{if(syncableKey(k)){try{localStorage.setItem(k,j.data[k]);delete mem[k];}catch(e){}}});cleanSeeds();store.set('syncLast',Date.now());syncSuppress=false;if(!silent)toast('⬇︎ Haettu pilvestä');refreshNames();updateDateLabel();renderDateBanner();renderActive();if(!document.getElementById('settings').classList.contains('hidden'))renderSettings();}
     else if(j.ok){if(!silent)toast('Pilvessä ei vielä dataa');}
     else if(!silent)toast('Synkka epäonnistui: '+(j.error||'?'));}
   catch(e){if(!silent)toast('Synkka epäonnistui (verkko/osoite)');}}
