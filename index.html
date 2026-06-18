@@ -952,18 +952,22 @@ function closeSettings(){document.getElementById('settings').classList.add('hidd
 function saveNames(){const j=(document.getElementById('snJo').value||'').trim(),r=(document.getElementById('snRa').value||'').trim();if(j)store.set('name:jo',j);if(r)store.set('name:ra',r);refreshNames();renderActive();renderSettings();toast('Nimet tallennettu');}
 function setSex(p,v){store.set('sex:'+p,v);renderSettings();renderActive();}
 function setAge(p,v){const n=parseInt(v);store.set('age:'+p,isNaN(n)?'':n);renderActive();}
+function setHeight(p,v){const n=parseInt(v);store.set('height:'+p,isNaN(n)?'':n);renderActive();}
 function sexOf(p){return store.get('sex:'+p,'');}
 function ageOf(p){return store.get('age:'+p,'');}
+function heightOf(p){return store.get('height:'+p,'');}
 function waistLimit(p){const s=sexOf(p);return s==='f'?80:s==='m'?94:null;}
 function whrLimit(p){const s=sexOf(p);return s==='f'?0.85:s==='m'?0.90:null;}
 function weeklyActiveMin(){return store.get('workouts:'+state.person,[]).filter(x=>x.type==='lenkki'&&within(x.d,7)).reduce((a,x)=>a+(x.min||0),0);}
 function currentWHR(p){const lh=store.get('lantio:'+p,[]),vh=store.get('vyotaro:'+p,[]),vMap={};vh.forEach(x=>vMap[x.d]=x.w);for(let i=lh.length-1;i>=0;i--){if(vMap[lh[i].d]!=null&&lh[i].w>0)return vMap[lh[i].d]/lh[i].w;}return null;}
-function healthCard(){const p=state.person,s=sexOf(p),age=ageOf(p);
+function healthCard(){const p=state.person,s=sexOf(p),age=ageOf(p),hgt=heightOf(p);
   let h='<h2 class="sec">Terveysmittarit</h2>';
-  if(!s&&!age){h+='<div class="card"><div class="amt" style="line-height:1.45">Aseta sukupuoli ja ikä asetuksista (⚙️), niin näet henkilökohtaiset terveysviitteet ja kannustavat vertailut. 💜</div></div>';return h;}
+  if(!s&&!age&&!hgt){h+='<div class="card"><div class="amt" style="line-height:1.45">Aseta sukupuoli, ikä ja pituus asetuksista (⚙️), niin näet henkilökohtaiset terveysviitteet ja kannustavat vertailut. 💜</div></div>';return h;}
   h+='<div class="card">';
-  const lv=latestVal('vyotaro'),wl=waistLimit(p);
+  const lv=latestVal('vyotaro'),lw=latestVal('paino'),wl=waistLimit(p);
   if(wl&&lv!=null){const ok=lv<=wl;h+=`<div class="hrow"><span>Vyötärö</span><span class="hval ${ok?'good':'warn'}">${String(lv).replace('.',',')} cm ${ok?'✅':'↑'}</span></div><div class="hsub">Terveellinen alle ${wl} cm${ok?' — hienoa, olet suosituksen alapuolella!':' — pienikin lasku pienentää riskiä.'}</div>`;}
+  if(hgt&&lv!=null){const whtr=lv/hgt;const ok=whtr<0.5;h+=`<div class="hrow"><span>Vyötärö-pituussuhde</span><span class="hval ${ok?'good':'warn'}">${whtr.toFixed(2).replace('.',',')} ${ok?'✅':'↑'}</span></div><div class="hsub">Nyrkkisääntö: pidä vyötärö alle puolet pituudesta (alle 0,50).</div>`;}
+  if(hgt&&lw!=null){const bmi=lw/Math.pow(hgt/100,2);const ok=bmi>=18.5&&bmi<25;h+=`<div class="hrow"><span>Painoindeksi (BMI)</span><span class="hval ${ok?'good':''}">${bmi.toFixed(1).replace('.',',')}</span></div><div class="hsub">Terveellinen alue 18,5–24,9. Huom: BMI on vain suuntaa antava eikä toimi lihaksikkaan vartalon kohdalla — se ei erottele lihasta rasvasta, joten voimaharjoittelijalla luku voi näyttää korkealta vaikka keho on hyvässä kunnossa.</div>`;}
   const wm=whrLimit(p),whr=currentWHR(p);
   if(wm&&whr!=null){const ok=whr<wm;h+=`<div class="hrow"><span>Vyötärö-lantio-suhde</span><span class="hval ${ok?'good':'warn'}">${whr.toFixed(2).replace('.',',')} ${ok?'✅':'↑'}</span></div><div class="hsub">Terveellinen alle ${wm.toFixed(2).replace('.',',')}${ok?' — hyvä tasapaino!':''}.</div>`;}
   const mins=weeklyActiveMin(),strg=saliWithin(7);
@@ -984,10 +988,11 @@ function renderSettings(){const S=document.getElementById('settings');const waOk
   const namesSaved=!!(store.get('name:jo',null)||store.get('name:ra',null));
   h+=`<div class="set-row"><button class="btn ${namesSaved?'ok':'grad'}" onclick="saveNames()">${namesSaved?'Nimet tallennettu ✓':'Tallenna nimet'}</button></div>`;
   h+='<div class="set-sec">Sukupuoli & ikä</div>';
-  ['jo','ra'].forEach(p=>{const sx=store.get('sex:'+p,''),ag=store.get('age:'+p,'');const edge=p==='jo'?'#ff5fa2':'#3b82f6';
+  ['jo','ra'].forEach(p=>{const sx=store.get('sex:'+p,''),ag=store.get('age:'+p,''),hg=store.get('height:'+p,'');const edge=p==='jo'?'#ff5fa2':'#3b82f6';
     h+=`<div class="set-prof" style="border-left:4px solid ${edge}"><div class="pn" style="${gtext(p)}">${nm(p)}</div>`;
     h+=`<div style="margin-bottom:9px"><div class="segbtns">`+[['f','Nainen'],['m','Mies'],['x','En halua sanoa']].map(o=>`<button class="segb ${sx===o[0]?'on':''}" onclick="setSex('${p}','${o[0]}')">${o[1]}</button>`).join('')+`</div></div>`;
     h+=`<div class="set-row"><label>Ikä</label><input type="number" inputmode="numeric" id="age_${p}" value="${ag}" placeholder="vuotta" onchange="setAge('${p}',this.value)" style="max-width:120px"></div>`;
+    h+=`<div class="set-row"><label>Pituus cm</label><input type="number" inputmode="numeric" id="hgt_${p}" value="${hg}" placeholder="cm" onchange="setHeight('${p}',this.value)" style="max-width:120px"></div>`;
     h+=`<div class="set-mini">Näiden perusteella saat henkilökohtaiset terveysviitteet. Vapaaehtoisia.</div></div>`;});
   h+='<div class="set-sec">PIN-koodit & Face ID</div>';
   ['jo','ra'].forEach(p=>{const has=lkHas(p),reco=!!store.get('recoQ:'+p,null),face=waHas(p);const edge=p==='jo'?'#ff5fa2':'#3b82f6';
@@ -1014,7 +1019,7 @@ function commitVal(id,v){const x=parseFloat((v||'').replace(',','.'));if(!isNaN(
    EIVÄT koodiin → eivät näy julkisessa GitHub-koodissa. Sovellus puhuu vain Apps Script
    -osoitteelle, joka pääsee vain yhteen taulukkoon (@OnlyCurrentDoc) — ei Driveen.
    Turva-avaimet (PIN, Face ID, palautus) EIVÄT synkkaannu. */
-const SYNC_PREFIXES=['food:','water:','paino:','vyotaro:','lantio:','workouts:','exdef:','hist:','prs:','pend:','goalWeek:','goalBig:','rewards:','wms:','name:','celebday:','badges:','trainGoal:','sex:','age:','migr_'];
+const SYNC_PREFIXES=['food:','water:','paino:','vyotaro:','lantio:','workouts:','exdef:','hist:','prs:','pend:','goalWeek:','goalBig:','rewards:','wms:','name:','celebday:','badges:','trainGoal:','sex:','age:','height:','migr_'];
 function syncableKey(k){return SYNC_PREFIXES.some(p=>k.indexOf(p)===0);}
 function syncCfg(){return {url:store.get('syncUrl',''),space:store.get('syncSpace',''),token:store.get('syncToken','')};}
 function syncOn(){const c=syncCfg();return !!(c.url&&c.space);}
