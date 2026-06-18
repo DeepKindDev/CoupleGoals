@@ -76,7 +76,9 @@
   .ob-check.on{background:var(--grad);border-color:transparent;}
   .ob-more{font-size:1.0rem;color:var(--muted);font-weight:700;margin-top:9px;}
   .ob-detail{font-size:1.1rem;color:var(--dim);margin-top:11px;line-height:1.5;border-top:1px solid var(--line);padding-top:11px;}
-  .sqgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px;}
+  .sqgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-bottom:11px;}
+  .sqgrid .optbtn{overflow:hidden;}
+  .ob-ttl,.ob-detail,.ob-more{overflow-wrap:anywhere;}
   .sqgrid .optbtn{margin-bottom:0;padding:14px 13px;display:flex;flex-direction:column;}
   .sqgrid .ob-ttl{font-size:1.12rem;}
   .sqgrid .ob-check{width:32px;height:32px;font-size:1.15rem;}
@@ -93,7 +95,7 @@
   .waterhint .wh-t{font-weight:800;font-size:1.06rem;}
   .waterhint .wh-s{font-size:1.02rem;color:var(--dim);margin-top:3px;line-height:1.42;}
 
-  .typebar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px;}
+  .typebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:11px;}
   .typebar button{border:1.5px solid var(--line);background:var(--surface2);border-radius:12px;
     padding:14px 6px;font-size:1.08rem;font-weight:800;color:var(--muted);cursor:pointer;font-family:inherit;}
   .typebar button.on{border-color:transparent;background:var(--grad);color:#fff;}
