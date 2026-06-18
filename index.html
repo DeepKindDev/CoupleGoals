@@ -85,9 +85,13 @@
   .foodhero .fh-t{font-size:1.3rem;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;width:fit-content;}
   .foodhero .fh-s{font-size:.97rem;color:var(--dim);margin-top:4px;line-height:1.45;}
   .foodhero .fh-prog{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap;}
-  .fh-chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:20px;padding:6px 11px;font-size:.9rem;font-weight:700;color:var(--dim);}
+  .fh-chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:20px;padding:7px 12px;font-size:.9rem;font-weight:700;color:var(--dim);font-family:inherit;cursor:pointer;}
   .fh-chip.on{background:var(--grad);color:#fff;border-color:transparent;}
-  h2.sec .se{-webkit-text-fill-color:initial;}
+  .fh-chip:active{transform:scale(.96);}
+  .waterhint{display:flex;align-items:center;gap:13px;background:linear-gradient(135deg,color-mix(in srgb,#3b82f6 22%,var(--surface)),color-mix(in srgb,#22d3c5 15%,var(--surface)));border:1px solid var(--line);border-radius:16px;padding:12px 15px;margin-bottom:15px;cursor:pointer;}
+  .waterhint .wh-drop{flex:none;filter:drop-shadow(0 3px 8px rgba(59,130,246,.4));}
+  .waterhint .wh-t{font-weight:800;font-size:1.06rem;}
+  .waterhint .wh-s{font-size:.9rem;color:var(--dim);margin-top:2px;line-height:1.4;}
 
   .typebar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:11px;}
   .typebar button{border:1.5px solid var(--line);background:var(--surface2);border-radius:12px;
@@ -524,14 +528,17 @@ function checkDay(){const f=foodState();const done=f.aamupala&&mealDone(f.lounas
 /* RENDER RUOKA */
 function renderRuoka(){
   const f=foodState(),p=state.person;let h='';
-  const aDone=!!f.aamupala,lDone=mealDone(f.lounas),pDone=mealDone(f.paivallinen),wDone=waterToday()>=waterGoal();
-  const TIPS=['Proteiinia joka aterialle — pitää nälän loitolla ja tukee lihaskasvua 💪','Väriä lautaselle: puoli lautasta kasviksia 🥗','Hyvin syöty päivä on voitto. Yksi valinta kerrallaan ✨','Vesi ensin — jano naamioituu usein näläksi 💧','Säännöllinen ateriarytmi = tasainen energia koko päivän ⚡','Ei täydellisyyttä, vaan toistoja — ja te teette tämän yhdessä 💞'];
-  const tip=TIPS[new Date().getDate()%TIPS.length];
-  h+=`<div class="foodhero"><div class="fh-t">🍽️ Ruoka tänään</div><div class="fh-s">${tip}</div><div class="fh-prog"><span class="fh-chip ${aDone?'on':''}">🌅 Aamupala</span><span class="fh-chip ${lDone?'on':''}">☀️ Lounas</span><span class="fh-chip ${pDone?'on':''}">🌙 Päivällinen</span><span class="fh-chip ${wDone?'on':''}">💧 Vesi</span></div></div>`;
-  h+='<h2 class="sec">🌅 Aamupala — napauta nähdäksesi annoksen</h2>';
+  const aDone=!!f.aamupala,lDone=mealDone(f.lounas),pDone=mealDone(f.paivallinen),vDone=!!(f.valipala.raejuusto||f.valipala.pahkina||f.valipala.rahka),iDone=!!(f.iltapala.leipa||f.iltapala.raejuusto||f.iltapala.rahka||f.iltapala.jogurtti);
+  const tip='Proteiinia joka aterialle — pitää nälän loitolla ja tukee lihaskasvua 💪';
+  h+=`<div class="foodhero"><div class="fh-t">🍽️ Ruoka tänään</div><div class="fh-s">${tip}</div><div class="fh-prog"><button class="fh-chip ${aDone?'on':''}" onclick="jumpTo('sec-aamupala')">🌅 Aamupala</button><button class="fh-chip ${lDone?'on':''}" onclick="jumpTo('sec-lounas')">☀️ Lounas</button><button class="fh-chip ${pDone?'on':''}" onclick="jumpTo('sec-paivallinen')">🌙 Päivällinen</button><button class="fh-chip ${vDone?'on':''}" onclick="jumpTo('sec-valipala')">🍎 Välipala</button><button class="fh-chip ${iDone?'on':''}" onclick="jumpTo('sec-iltapala')">🌜 Iltapala</button></div></div>`;
+  const wl=(Math.round(waterToday()/100)/10).toString().replace('.',','),wg=(waterGoal()/1000).toString().replace('.',',');
+  const WTIPS=['Pidä pullo lähellä ja ota kulaus silloin tällöin.','Jano naamioituu usein näläksi — ehditkö lasilliseen nyt?','Vesi on halvin energiajuoma 💙','Hyvin nesteytetty keho jaksaa treenata paremmin.'];
+  const wtip=WTIPS[new Date().getHours()%WTIPS.length];
+  h+=`<div class="waterhint" onclick="showView('vesi')"><div class="wh-drop"><svg viewBox="0 0 24 30" width="34" height="42" aria-hidden="true"><defs><linearGradient id="wdg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3c5"/></linearGradient></defs><path d="M12 2 C12 2 4 13 4 20 a8 8 0 0 0 16 0 C20 13 12 2 12 2 Z" fill="url(#wdg)"/></svg></div><div class="wh-txt"><div class="wh-t">Muista juoda vettä 💧</div><div class="wh-s">${wtip} · tänään ${wl} / ${wg} l</div></div></div>`;
+  h+='<h2 class="sec" id="sec-aamupala">🌅 Aamupala — napauta nähdäksesi annoksen</h2>';
   h+='<div class="sqgrid">';BREAKFAST[p].forEach(o=>{h+=optBtn('a'+o.id,o.n,o.a,f.aamupala===o.id,`pickAamu(${o.id})`);});h+='</div>';
   ['lounas','paivallinen'].forEach(meal=>{const m=f[meal],tit=meal==='lounas'?'☀️ Lounas':'🌙 Päivällinen';
-    h+=`<h2 class="sec">${tit} — koosta annos</h2><div class="card"><div class="typebar">${tbtn(meal,'lautas','Lautasmalli',m.tyyppi)}${tbtn(meal,'keitto','Keitto',m.tyyppi)}${tbtn(meal,'grilli','Grilli',m.tyyppi)}${tbtn(meal,'muu','Muu',m.tyyppi)}</div>`;
+    h+=`<h2 class="sec" id="sec-${meal}">${tit} — koosta annos</h2><div class="card"><div class="typebar">${tbtn(meal,'lautas','Lautasmalli',m.tyyppi)}${tbtn(meal,'keitto','Keitto',m.tyyppi)}${tbtn(meal,'grilli','Grilli',m.tyyppi)}${tbtn(meal,'muu','Muu',m.tyyppi)}</div>`;
     if(m.tyyppi==='lautas'){h+='<div class="amt" style="margin-top:12px;font-weight:800;color:var(--text)">Proteiini</div><div class="chips">';PROT[p].forEach(x=>h+=chip(`setSel('${meal}','prot','${x.k}')`,x.n,x.a,m.prot===x.k));h+='</div>';
       h+='<div class="amt" style="margin-top:12px;font-weight:800;color:var(--text)">Salaatti</div>';
       h+=`<div class="chips">${chip(`tglSalad('${meal}')`,'Salaatti','puoli lautasta + öljy',m.salaatti)}</div>`;
@@ -540,7 +547,7 @@ function renderRuoka(){
     else if(m.tyyppi==='grilli'){h+='<div class="chips" style="margin-top:12px">';GRILL.forEach(x=>h+=chip(`setSel('${meal}','grill','${x.k}')`,x.n,x.a,m.grill===x.k));h+='</div><div class="hint">Grillipäivä: muiden aterioiden tärkkelys/lisätty rasva pienemmäksi.</div>';}
     else{h+='<div class="chips" style="margin-top:12px">';MUU[p].forEach(x=>h+=chip(`setSel('${meal}','muu','${x.k}')`,x.n,x.a||'',m.muu===x.k));h+='</div><div class="hint">Kohtuullinen annos + salaatti. Carbonara & Hese/Mäkki harvemmin; sushissa suosi lohta/kalaa + edamame.</div>';}
     h+='</div>';});
-  h+='<h2 class="sec">🍎 Välipala</h2>';
+  h+='<h2 class="sec" id="sec-valipala">🍎 Välipala</h2>';
   const va = p==='jo'
     ? {raejuusto:'100 g + 1 appelsiini · maitokahvi / tee', pahkina:'kourallinen (~20 g) · maitokahvi / tee', rahka:'175 g (1 purkki) · maitokahvi / tee'}
     : {raejuusto:'150 g + 1 appelsiini · maitokahvi / tee', pahkina:'~30 g · maitokahvi / tee', rahka:'175 g + banaani · maitokahvi / tee'};
@@ -550,7 +557,7 @@ function renderRuoka(){
   h+=optBtn('v_pahkina','Pähkinät',va.pahkina,f.valipala.pahkina,"tglField('valipala.pahkina')");
   h+=optBtn('v_rahka','Profeel-rahka',va.rahka,f.valipala.rahka,"tglField('valipala.rahka')");
   h+='</div>';
-  h+='<h2 class="sec">🌜 Iltapala</h2>';
+  h+='<h2 class="sec" id="sec-iltapala">🌜 Iltapala</h2>';
   const ia = p==='jo'
     ? {leipa:'1 ruispala + juusto + leikkele', raejuusto:'100 g + marjat', rahka:'175 g', jogurtti:'jogurtti + mustikat'}
     : {leipa:'2 ruispalaa + juusto + leikkele', raejuusto:'150 g + marjat', rahka:'175 g', jogurtti:'jogurtti + mustikat'};
@@ -817,6 +824,7 @@ function renderEdist(){
 
 /* NAV */
 function showView(v){state.view=v;state.editing=null;state.adding=false;['ruoka','sali','vesi','edist','palkinnot'].forEach(n=>{document.getElementById('v-'+n).classList.toggle('active',n===v);document.getElementById('n-'+n).classList.toggle('on',n===v);});renderActive();}
+function jumpTo(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
 function setPerson(p){state.person=p;state.prog=1;state.editing=null;state.adding=false;state.showArchive=false;state._lk=null;document.body.className=p;document.getElementById('whoJo').className=p==='jo'?'on':'';document.getElementById('whoRa').className=p==='ra'?'on':'';renderActive();}
 function renderActive(){({ruoka:renderRuoka,sali:renderSali,vesi:renderVesi,edist:renderEdist,palkinnot:renderPalkinnot})[state.view]();}
 
