@@ -283,15 +283,21 @@
   #dateBanner{flex:none;display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;padding:9px 14px;background:linear-gradient(135deg,color-mix(in srgb,var(--p1) 30%,var(--bg2)),color-mix(in srgb,var(--p2) 24%,var(--bg2)));border-bottom:1px solid var(--line);font-size:.98rem;font-weight:700;color:var(--text);}
   #dateBanner.hidden{display:none;}
   #dateBanner button{background:#fff;color:var(--p1);border:none;border-radius:9px;padding:6px 13px;font-weight:800;font-family:inherit;font-size:.95rem;cursor:pointer;}
-  /* HEATMAP */
-  .hm{display:flex;gap:3px;overflow-x:auto;padding:3px 0 2px;}
-  .hm-col{display:flex;flex-direction:column;gap:3px;}
-  .hm-cell{width:13px;height:13px;border-radius:3px;background:var(--surface2);}
-  .hm-1{background:color-mix(in srgb,var(--p1) 32%,var(--surface2));}
-  .hm-2{background:color-mix(in srgb,var(--p1) 62%,var(--surface));}
-  .hm-3{background:var(--grad);}
-  .hm-legend{display:flex;align-items:center;gap:6px;justify-content:flex-end;font-size:.82rem;color:var(--muted);margin-top:7px;}
-  .hm-legend .hm-cell{width:11px;height:11px;}
+  /* HEATMAP-KALENTERI */
+  .hm-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+  .hm-head button{background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:9px;width:38px;height:38px;font-size:1.2rem;font-family:inherit;cursor:pointer;}
+  .hm-head button:disabled{opacity:.3;}
+  .hm-title{font-weight:800;font-size:1.06rem;}
+  .hm-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+  .hm-wd{text-align:center;font-size:.8rem;color:var(--muted);font-weight:700;padding:2px 0;}
+  .hm-c{aspect-ratio:1;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.86rem;font-weight:700;color:var(--dim);background:var(--surface2);}
+  .hm-c.hm-1{background:color-mix(in srgb,var(--p1) 32%,var(--surface2));color:#fff;}
+  .hm-c.hm-2{background:color-mix(in srgb,var(--p1) 62%,var(--surface));color:#fff;}
+  .hm-c.hm-3{background:var(--grad);color:#fff;}
+  .hm-c.hm-fut{opacity:.25;}
+  .hm-c.hm-today{outline:2px solid var(--p1);}
+  .hm-legend{display:flex;align-items:center;gap:6px;justify-content:flex-end;font-size:.82rem;color:var(--muted);margin-top:9px;}
+  .hm-legend .hm-c{width:14px;height:14px;aspect-ratio:auto;}
   /* BADGES */
   .badges{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:4px;}
   .badge2{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px 12px;}
@@ -356,7 +362,7 @@
 
 <script>
 const CONFIG={SHEET_API_URL:""};
-const APP_VERSION='18.6.2026 · päivän pisteet + tervehdys';
+const APP_VERSION='18.6.2026 · aktiivisuuskalenteri';
 const mem={};
 const store={get(k,def){try{const v=localStorage.getItem(k);return v==null?(k in mem?mem[k]:def):JSON.parse(v);}catch(e){return (k in mem)?mem[k]:def;}},
   set(k,v){mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}if(typeof scheduleSync==='function')scheduleSync(k);}};
@@ -500,12 +506,22 @@ function cleanSeeds(){
 function goalOf(p){return p==='jo'?2000:2500;}
 function foodCompleteOn(p,d){const f=Object.assign(DEFAULTFOOD(),store.get('food:'+p+':'+d,{}));return !!(f.aamupala&&mealDone(f.lounas)&&mealDone(f.paivallinen));}
 function dayScore(p,off){const d=dkey(off);const wo=store.get('workouts:'+p,[]).some(x=>x.d===d);const wt=store.get('water:'+p+':'+d,0)>=goalOf(p);const fd=foodCompleteOn(p,d);return (wo?1:0)+(wt?1:0)+(fd?1:0);}
-function heatmapCard(){const p=state.person,WEEKS=13,DAYS=WEEKS*7;
-  let cells=[];for(let off=DAYS-1;off>=0;off--){const a=dkey(off).split('-').map(Number);const wd=(new Date(a[0],a[1]-1,a[2]).getDay()+6)%7;cells.push({off,wd,sc:dayScore(p,off)});}
-  let cols=[],cur=null;cells.forEach(c=>{if(c.wd===0||!cur){cur=[null,null,null,null,null,null,null];cols.push(cur);}cur[c.wd]=c;});
-  let h='<h2 class="sec">Aktiivisuus</h2><div class="card"><div class="hm">';
-  cols.forEach(col=>{h+='<div class="hm-col">';for(let r=0;r<7;r++){const c=col[r];h+=c?`<div class="hm-cell hm-${c.sc}"></div>`:'<div class="hm-cell" style="background:transparent"></div>';}h+='</div>';});
-  h+='</div><div class="hm-legend">vähemmän <span class="hm-cell hm-0"></span><span class="hm-cell hm-1"></span><span class="hm-cell hm-2"></span><span class="hm-cell hm-3"></span> enemmän</div></div>';
+function hmNav(delta){state.hmM+=delta;if(state.hmM<1){state.hmM=12;state.hmY--;}else if(state.hmM>12){state.hmM=1;state.hmY++;}renderEdist();}
+function heatmapCard(){const p=state.person;
+  const tA=dkey(0).split('-').map(Number);if(!state.hmM){state.hmY=tA[0];state.hmM=tA[1];}
+  const Y=state.hmY,M=state.hmM,MN=['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu','Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+  const today=new Date(tA[0],tA[1]-1,tA[2]);today.setHours(0,0,0,0);
+  const startWd=(new Date(Y,M-1,1).getDay()+6)%7,days=new Date(Y,M,0).getDate();
+  const nextBlocked=(Y>tA[0]||(Y===tA[0]&&M>=tA[1]));
+  let h='<h2 class="sec">Aktiivisuus</h2><div class="card"><div class="hm-head"><button onclick="hmNav(-1)">‹</button><div class="hm-title">'+MN[M-1]+' '+Y+'</div><button onclick="hmNav(1)" '+(nextBlocked?'disabled':'')+'>›</button></div>';
+  h+='<div class="hm-cal">';['ma','ti','ke','to','pe','la','su'].forEach(w=>h+='<div class="hm-wd">'+w+'</div>');
+  for(let i=0;i<startWd;i++)h+='<div></div>';
+  for(let d=1;d<=days;d++){const dObj=new Date(Y,M-1,d);dObj.setHours(0,0,0,0);const off=Math.round((today-dObj)/86400000);
+    let cls='hm-c';if(dObj>today)cls+=' hm-fut';else cls+=' hm-'+dayScore(p,off);
+    const isToday=(Y===tA[0]&&M===tA[1]&&d===tA[2]);
+    h+=`<div class="${cls}${isToday?' hm-today':''}">${d}</div>`;}
+  h+='</div><div class="hm-legend">vähemmän <span class="hm-c hm-0"></span><span class="hm-c hm-1"></span><span class="hm-c hm-2"></span><span class="hm-c hm-3"></span> enemmän</div>';
+  h+='<div class="hsub" style="margin-top:8px">Mitä useampi tavoite täyttyi (ruokailut, vesi, treeni), sitä kirkkaampi päivä.</div></div>';
   return h;
 }
 function wrappedData(p){const N=30;let sali=0,lenkki=0,km=0,water=0;
