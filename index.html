@@ -318,6 +318,13 @@
   .wr-stat .v{font-size:1.5rem;font-weight:800;}
   .wr-stat .l{font-size:.84rem;color:var(--dim);margin-top:2px;}
   .wr-fun{font-size:1.04rem;color:var(--dim);margin-top:10px;line-height:1.5;}
+  .wr-cmpsub{font-size:.92rem;color:var(--dim);margin-bottom:8px;}
+  .wr-cmp{margin:4px 0 2px;}
+  .wr-cmprow{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:6px;align-items:center;padding:8px 4px;border-top:1px solid var(--line);font-weight:700;}
+  .wr-cmprow.head{border-top:none;color:var(--dim);font-size:.95rem;}
+  .wr-cmprow .wl{text-align:left;}
+  .wr-cmprow span{text-align:center;}
+  .wr-cmprow .win{color:#fff;font-weight:800;}
   .wr-card .btn{border:none;border-radius:12px;padding:13px;font-weight:800;font-family:inherit;font-size:1.05rem;cursor:pointer;width:100%;margin-top:14px;background:var(--grad);color:#fff;}
 
   #toast{position:fixed;left:50%;top:72px;transform:translateX(-50%) translateY(-20px);z-index:50;background:var(--grad);color:#fff;font-weight:800;font-size:1.05rem;padding:13px 20px;border-radius:30px;box-shadow:0 8px 26px rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:.28s;max-width:92%;text-align:center;}
@@ -363,7 +370,7 @@
 
 <script>
 const CONFIG={SHEET_API_URL:""};
-const APP_VERSION='18.6.2026 · humorit + yönudge';
+const APP_VERSION='18.6.2026 · Wrapped siistitty + lääkäriviittaukset pois datasta';
 const mem={};
 const store={get(k,def){try{const v=localStorage.getItem(k);return v==null?(k in mem?mem[k]:def):JSON.parse(v);}catch(e){return (k in mem)?mem[k]:def;}},
   set(k,v){mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}if(typeof scheduleSync==='function')scheduleSync(k);}};
@@ -480,6 +487,12 @@ function initData(){
     if(isDemoArr(store.get('lantio:'+p,[])))store.set('lantio:'+p,measSeed(SEED_LANTIO[p]));
     [1,2,3].forEach(pr=>PROGRAMS[p][pr].forEach((e,i)=>{const hk='hist:'+p+':p'+pr+'e'+i;if(isDemoArr(store.get(hk,[])))store.set(hk,histSeed(e.b));}));
   });store.set('migr_seed2',true);}
+  // Poista vanhat "lääkärin luvalla" / kirurgi / fysio -viittaukset tallennetusta datasta
+  if(!store.get('migr_nomed',false)){const med=/lääkärin luvalla|kirurgi|fysiote/i;
+    ['jo','ra'].forEach(p=>{
+      [1,2,3].forEach(pr=>{const k='exdef:'+p+':'+pr,d=store.get(k,null);if(d&&d.length){let ch=false;d.forEach(e=>{if(e.n&&med.test(e.n)){e.n=e.n.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s+/g,' ').trim();if(/^penkki$/i.test(e.n))e.n='Penkkipunnerrus';ch=true;}});if(ch)store.set(k,d);}});
+      const gb=store.get('goalBig:'+p,null);if(gb&&gb.exName&&med.test(gb.exName)){gb.exName=gb.exName.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s+/g,' ').trim();if(/^penkki$/i.test(gb.exName))gb.exName='Penkkipunnerrus';store.set('goalBig:'+p,gb);}
+    });store.set('migr_nomed',true);}
 }
 function exDefs(){return store.get('exdef:'+state.person+':'+state.prog,[]);}
 function setExDefs(d){store.set('exdef:'+state.person+':'+state.prog,d);}
@@ -525,6 +538,10 @@ function heatmapCard(){const p=state.person;
   h+='<div class="hsub" style="margin-top:8px">Mitä useampi tavoite täyttyi (ruokailut, vesi, treeni), sitä kirkkaampi päivä.</div></div>';
   return h;
 }
+function repsNum(r){const m=(''+r).match(/\d+/);return m?parseInt(m[0]):8;}
+function totalKgAll(){let tot=0;['jo','ra'].forEach(p=>{[1,2,3].forEach(pr=>{(store.get('exdef:'+p+':'+pr,[])).forEach(e=>{if(e.repsOnly)return;const sets=e.sets||3,reps=repsNum(e.reps);(store.get('hist:'+p+':'+e.id,[])).forEach(x=>{if(x&&x.w>0&&!x.demo)tot+=x.w*sets*reps;});});});});return Math.round(tot);}
+function dayUsedAny(off){const d=dkey(off);return ['jo','ra'].some(p=>{if(store.get('water:'+p+':'+d,0)>0)return true;if(store.get('workouts:'+p,[]).some(x=>x.d===d))return true;if(store.get('food:'+p+':'+d,null))return true;return false;});}
+function coupleStreak(){let s=0;for(let i=0;i<400;i++){if(dayUsedAny(i))s++;else break;}return s;}
 function wrappedData(p){const N=30;let sali=0,lenkki=0,km=0,water=0;
   store.get('workouts:'+p,[]).forEach(x=>{if(within(x.d,N)){if(x.type==='sali')sali++;else if(x.type==='lenkki'){lenkki++;km+=x.km||0;}}});
   for(let i=0;i<N;i++)water+=store.get('water:'+p+':'+dkey(i),0);
@@ -532,22 +549,19 @@ function wrappedData(p){const N=30;let sali=0,lenkki=0,km=0,water=0;
   return {sali,lenkki,km:Math.round(km*10)/10,waterL:Math.round(water/100)/10,bestPR,streak:streakOf(p),N};
 }
 function wrappedTitle(d){const arr=[['Salisankari 🏋️',d.sali*3],['Lenkkilegenda 👟',d.km],['Vesipeto 💧',d.waterL],['Putkimestari 🔥',d.streak*4]];arr.sort((a,b)=>b[1]-a[1]);return arr[0][1]>0?arr[0][0]:'Hyvä alku! ✨';}
-function openWrapped(){const p=state.person,d=wrappedData(p),o=p==='jo'?'ra':'jo',od=wrappedData(o);
-  const ammeet=(d.waterL/150);const ratakierros=Math.round(d.km*1000/400);
-  let fun=[];if(d.waterL>0)fun.push(`Joit ${d.waterL.toString().replace('.',',')} l vettä — n. ${ammeet.toFixed(1).replace('.',',')} kylpyammeellista.`);
-  if(d.km>0)fun.push(`Lenkkeilit ${d.km.toString().replace('.',',')} km — n. ${ratakierros} kierrosta juoksuradalla.`);
-  const yhteisKm=Math.round((d.km+od.km)*10)/10,yhteisL=Math.round((d.waterL+od.waterL)*10)/10;
-  let h='<div class="wr-card"><h3>✨ CoupleGoals Wrapped</h3><div class="wr-title">'+wrappedTitle(d)+'</div>';
+function openWrapped(){
+  const kg=totalKgAll();const km=Math.round((totalKm('jo')+totalKm('ra'))*10)/10;const L=Math.round((totalWaterL('jo')+totalWaterL('ra'))*10)/10;const streak=coupleStreak();
+  const f=v=>v.toLocaleString('fi-FI');const f1=v=>v.toFixed(1).replace('.',',');
+  let h='<div class="wr-card"><h3>✨ CoupleGoals Wrapped</h3><div class="wr-cmpsub">Teidän yhteinen saldonne 💞</div>';
   h+='<div class="wr-grid">';
-  h+=`<div class="wr-stat"><div class="v">${d.sali}</div><div class="l">🏋️ salitreeniä</div></div>`;
-  h+=`<div class="wr-stat"><div class="v">${d.lenkki}</div><div class="l">👟 lenkkiä · ${d.km.toString().replace('.',',')} km</div></div>`;
-  h+=`<div class="wr-stat"><div class="v">${d.waterL.toString().replace('.',',')} l</div><div class="l">💧 vettä</div></div>`;
-  h+=`<div class="wr-stat"><div class="v">${d.streak}</div><div class="l">🔥 päivän putki</div></div>`;
+  h+=`<div class="wr-stat"><div class="v">${f(kg)} kg</div><div class="l">🏋️ nostettu yhteensä</div></div>`;
+  h+=`<div class="wr-stat"><div class="v">${f1(km)} km</div><div class="l">🏃 lenkkeilty yhteensä</div></div>`;
+  h+=`<div class="wr-stat"><div class="v">${f1(L)} l</div><div class="l">💧 vettä juotu</div></div>`;
+  h+=`<div class="wr-stat"><div class="v">${streak}</div><div class="l">🔥 päivän yhteisputki</div></div>`;
   h+='</div>';
-  if(d.bestPR){const bw=latestVal('paino');const ratio=(bw&&bw>0)?(d.bestPR.w/bw):null;h+=`<div class="wr-fun">⭐ Paras ennätys: <b>${d.bestPR.ex} ${d.bestPR.w} kg</b>${ratio?` — ${ratio.toFixed(1).replace('.',',')}× kehonpainosi 💪`:''}</div>`;}
-  h+=`<div class="wr-fun">💞 Yhdessä: ${yhteisKm.toString().replace('.',',')} km ja ${yhteisL.toString().replace('.',',')} l vettä.</div>`;
-  if(fun.length)h+='<div class="wr-fun">'+fun.join('<br>')+'</div>';
-  h+='<div class="wr-fun" style="font-size:.82rem;opacity:.8">Viimeiset 30 päivää</div>';
+  const WC=['Yhdessä te ootte voittamaton tiimi 💞','Jatkakaa samaan malliin — tämä näyttää upealta! 🔥','Pienistä teoista kasvaa isoja tuloksia 🌟','Te teette tästä hauskaa — ja se kantaa pisimmälle 😄','Ylpeyden aihetta molemmille! Pidetään liekki yllä 💪','Mahtavaa työtä, te kaksi! 🙌'];
+  const wc2=WC[(new Date().getDate()+fiHour())%WC.length];
+  h+='<div class="wr-fun" style="text-align:center">'+wc2+'</div>';
   h+='<button class="btn" onclick="closeWrapped()">Sulje</button></div>';
   document.getElementById('wrapped').innerHTML=h;document.getElementById('wrapped').classList.remove('hidden');confetti(true);}
 function closeWrapped(){document.getElementById('wrapped').classList.add('hidden');}
@@ -802,7 +816,8 @@ function partnerCard(){
   if(ach)cheerHi=`<div class="cheer-hi">🎉 ${nm(other)} saavutti ${ach} tänään!</div>`;
   return `<h2 class="sec">Yhdessä tänään</h2><div class="card">${row('jo')}${row('ra')}${cheerHi}<button class="btn grad full" style="margin-top:11px" onclick="cheer('${other}')">Lähetä kannustus käyttäjälle: ${nm(other)} 🔥</button></div>`;
 }
-function cheer(p){celebrate('🔥 Kannustus lähetetty: '+nm(p)+'!');}
+function cheer(p){store.set('cheerFor:'+p,{from:state.person,t:Date.now()});celebrate('🔥 Kannustus lähetetty: '+nm(p)+'!');}
+function checkCheer(){const p=state.person;const c=store.get('cheerFor:'+p,null);if(c&&c.t&&c.t>store.get('cheerSeen:'+p,0)){store.set('cheerSeen:'+p,c.t);celebrate('💗 '+nm(c.from)+' lähetti sinulle kannustuksen — sinä pystyt tähän! 🔥',true);}}
 function weeklyCard(){
   const w=store.get('workouts:'+state.person,[]).filter(x=>within(x.d,7)).length;
   const pr=store.get('prs:'+state.person,[]).filter(x=>within(x.d,7)).length;
@@ -951,7 +966,7 @@ function renderEdist(){
 /* NAV */
 function showView(v){state.view=v;state.editing=null;state.adding=false;['ruoka','sali','vesi','edist','palkinnot'].forEach(n=>{document.getElementById('v-'+n).classList.toggle('active',n===v);document.getElementById('n-'+n).classList.toggle('on',n===v);});renderActive();}
 function jumpTo(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
-function setPerson(p){state.person=p;state.prog=1;state.editing=null;state.adding=false;state.showArchive=false;state._lk=null;document.body.className=p;document.getElementById('whoJo').className=p==='jo'?'on':'';document.getElementById('whoRa').className=p==='ra'?'on':'';renderActive();}
+function setPerson(p){state.person=p;state.prog=1;state.editing=null;state.adding=false;state.showArchive=false;state._lk=null;document.body.className=p;document.getElementById('whoJo').className=p==='jo'?'on':'';document.getElementById('whoRa').className=p==='ra'?'on':'';renderActive();checkCheer();}
 function renderActive(){({ruoka:renderRuoka,sali:renderSali,vesi:renderVesi,edist:renderEdist,palkinnot:renderPalkinnot})[state.view]();}
 
 /* ===== PIN-LUKITUS =====
@@ -1018,6 +1033,7 @@ function renderLock(){const L=document.getElementById('lock');document.body.clas
 function openSettings(){document.getElementById('settings').classList.remove('hidden');renderSettings();}
 function closeSettings(){document.getElementById('settings').classList.add('hidden');}
 function saveNames(){const j=(document.getElementById('snJo').value||'').trim(),r=(document.getElementById('snRa').value||'').trim();if(j)store.set('name:jo',j);if(r)store.set('name:ra',r);refreshNames();renderActive();renderSettings();toast('Nimet tallennettu');}
+function setMyProfile(p){store.set('myProfile',p);setPerson(p);renderSettings();toast('Tämä laite avautuu nyt profiilille '+nm(p));}
 function setSex(p,v){store.set('sex:'+p,v);renderSettings();renderActive();}
 function setAge(p,v){const n=parseInt(v);store.set('age:'+p,isNaN(n)?'':n);renderActive();}
 function setHeight(p,v){const n=parseInt(v);store.set('height:'+p,isNaN(n)?'':n);renderActive();}
@@ -1069,6 +1085,10 @@ function gtext(p){return `background:${PGRAD[p]};-webkit-background-clip:text;ba
 function renderSettings(){const S=document.getElementById('settings');const waOk=waSupported();const esc=v=>(v||'').replace(/"/g,'&quot;');
   let h='<div class="set-card"><h3>Asetukset</h3>';
   if(!anyPin())h+='<div class="set-mini" style="margin:4px 2px 2px;color:var(--text);font-size:1rem">👋 Tervetuloa! Asettakaa kummallekin PIN-koodi alta — sovellus lukittuu seuraavalla avauksella. Halutessanne voitte myös ottaa Face ID:n käyttöön.</div>';
+  const myp=store.get('myProfile','jo');
+  h+='<div class="set-sec">Tämän laitteen profiili</div>';
+  h+='<div class="set-mini" style="margin:0 2px 8px">Valitse kumpi olet — sovellus avautuu tällä laitteella tähän profiiliin.</div>';
+  h+='<div class="segbtns" style="margin-bottom:6px">'+[['jo'],['ra']].map(o=>`<button class="segb ${myp===o[0]?'on':''}" onclick="setMyProfile('${o[0]}')">${nm(o[0])}</button>`).join('')+'</div>';
   h+='<div class="set-sec">Nimet</div>';
   h+=`<div class="set-row" style="border-left:4px solid #ff5fa2;border-radius:0;padding-left:10px"><label style="${gtext('jo')}">Profiili 1</label><input type="text" id="snJo" value="${esc(store.get('name:jo',''))}" placeholder="Kirjoita nimi"></div>`;
   h+=`<div class="set-row" style="border-left:4px solid #3b82f6;border-radius:0;padding-left:10px"><label style="${gtext('ra')}">Profiili 2</label><input type="text" id="snRa" value="${esc(store.get('name:ra',''))}" placeholder="Kirjoita nimi"></div>`;
@@ -1107,7 +1127,7 @@ function commitVal(id,v){const x=parseFloat((v||'').replace(',','.'));if(!isNaN(
    EIVÄT koodiin → eivät näy julkisessa GitHub-koodissa. Sovellus puhuu vain Apps Script
    -osoitteelle, joka pääsee vain yhteen taulukkoon (@OnlyCurrentDoc) — ei Driveen.
    Turva-avaimet (PIN, Face ID, palautus) EIVÄT synkkaannu. */
-const SYNC_PREFIXES=['food:','water:','paino:','vyotaro:','lantio:','workouts:','exdef:','hist:','prs:','pend:','goalWeek:','goalBig:','rewards:','wms:','name:','celebday:','badges:','trainGoal:','sex:','age:','height:','migr_'];
+const SYNC_PREFIXES=['food:','water:','paino:','vyotaro:','lantio:','workouts:','exdef:','hist:','prs:','pend:','goalWeek:','goalBig:','rewards:','wms:','name:','celebday:','badges:','trainGoal:','sex:','age:','height:','cheerFor:','migr_'];
 function syncableKey(k){return SYNC_PREFIXES.some(p=>k.indexOf(p)===0);}
 function syncCfg(){return {url:store.get('syncUrl',''),space:store.get('syncSpace',''),token:store.get('syncToken','')};}
 function syncOn(){const c=syncCfg();return !!(c.url&&c.space);}
@@ -1123,7 +1143,7 @@ async function syncPush(silent){if(!syncOn()){if(!silent)toast('Täytä synkka-a
 async function syncPull(silent){if(!syncOn()){if(!silent)toast('Täytä synkka-asetukset ensin');return;}const c=syncCfg();
   try{const res=await fetch(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'pull',space:c.space,token:c.token})});
     const j=await res.json();
-    if(j.ok&&j.data){syncSuppress=true;Object.keys(j.data).forEach(k=>{if(syncableKey(k)){try{localStorage.setItem(k,j.data[k]);delete mem[k];}catch(e){}}});cleanSeeds();store.set('syncLast',Date.now());syncSuppress=false;if(!silent)toast('⬇︎ Haettu pilvestä');refreshNames();updateDateLabel();renderDateBanner();renderActive();if(!document.getElementById('settings').classList.contains('hidden'))renderSettings();}
+    if(j.ok&&j.data){syncSuppress=true;Object.keys(j.data).forEach(k=>{if(syncableKey(k)){try{localStorage.setItem(k,j.data[k]);delete mem[k];}catch(e){}}});cleanSeeds();store.set('syncLast',Date.now());syncSuppress=false;if(!silent)toast('⬇︎ Haettu pilvestä');refreshNames();updateDateLabel();renderDateBanner();renderActive();checkCheer();if(!document.getElementById('settings').classList.contains('hidden'))renderSettings();}
     else if(j.ok){if(!silent)toast('Pilvessä ei vielä dataa');}
     else if(!silent)toast('Synkka epäonnistui: '+(j.error||'?'));}
   catch(e){if(!silent)toast('Synkka epäonnistui (verkko/osoite)');}}
@@ -1133,7 +1153,8 @@ initData();
 refreshNames();
 updateDateLabel();
 renderDateBanner();
-renderActive();
+state.person=store.get('myProfile','jo');
+setPerson(state.person);
 showLock();
 if(!anyPin()&&!store.get('welcomed',false)){store.set('welcomed',true);openSettings();}
 bootSync();
