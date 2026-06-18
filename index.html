@@ -370,7 +370,7 @@
 
 <script>
 const CONFIG={SHEET_API_URL:""};
-const APP_VERSION='18.6.2026 · Wrapped siistitty + lääkäriviittaukset pois datasta';
+const APP_VERSION='18.6.2026 · vesiputki korjattu + valevesipäivät pois';
 const mem={};
 const store={get(k,def){try{const v=localStorage.getItem(k);return v==null?(k in mem?mem[k]:def):JSON.parse(v);}catch(e){return (k in mem)?mem[k]:def;}},
   set(k,v){mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}if(typeof scheduleSync==='function')scheduleSync(k);}};
@@ -473,7 +473,6 @@ function initData(){
     if(store.get('prs:'+p,null)===null)store.set('prs:'+p,[{d:dkey(2),ex:PROGRAMS[p][1][0].n,w:PROGRAMS[p][1][0].b}]);
     if(store.get('goalWeek:'+p,null)===null)store.set('goalWeek:'+p, p==='jo'?{metric:'sali',target:3,reward:'',earned:false,weekKey:curWeek(),startVal:null,exId:null}:{metric:'ruoka',target:5,reward:'',earned:false,weekKey:curWeek(),startVal:null,exId:null});
     if(store.get('goalBig:'+p,null)===null)store.set('goalBig:'+p, p==='jo'?{metric:'vyotaro',target:80,reward:'',earned:false,startVal:null,exName:null}:{metric:'liike',target:100,reward:'',earned:false,startVal:null,exName:'Penkkipunnerrus'});
-    [1,2,3].forEach(o=>{if(store.get('water:'+p+':'+dkey(o),null)===null)store.set('water:'+p+':'+dkey(o), p==='jo'?2000:2500);});
   });
   // Oletustoistot 3x8: yhtenäistetään olemassa olevat liikkeet kerran
   if(!store.get('migr_reps8',false)){['jo','ra'].forEach(p=>[1,2,3].forEach(pr=>{const k='exdef:'+p+':'+pr;const d=store.get(k,null);if(d&&d.length){d.forEach(e=>{e.reps='8';if(!e.sets)e.sets=3;});store.set(k,d);}}));store.set('migr_reps8',true);}
@@ -493,6 +492,11 @@ function initData(){
       [1,2,3].forEach(pr=>{const k='exdef:'+p+':'+pr,d=store.get(k,null);if(d&&d.length){let ch=false;d.forEach(e=>{if(e.n&&med.test(e.n)){e.n=e.n.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s+/g,' ').trim();if(/^penkki$/i.test(e.n))e.n='Penkkipunnerrus';ch=true;}});if(ch)store.set(k,d);}});
       const gb=store.get('goalBig:'+p,null);if(gb&&gb.exName&&med.test(gb.exName)){gb.exName=gb.exName.replace(/\s*\([^)]*\)\s*/g,' ').replace(/\s+/g,' ').trim();if(/^penkki$/i.test(gb.exName))gb.exName='Penkkipunnerrus';store.set('goalBig:'+p,gb);}
     });store.set('migr_nomed',true);}
+  // Poista automaattisesti siemennetyt valevesipäivät (täsmälleen tavoite, ei ruokaa eikä treeniä → ei aitoa)
+  if(!store.get('migr_waterclean',false)){const goals={jo:2000,ra:2500};const keys=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&/^water:(jo|ra):/.test(k))keys.push(k);}
+    keys.forEach(k=>{const m=k.match(/^water:(jo|ra):(.+)$/);if(!m)return;const p=m[1],d=m[2];let v;try{v=JSON.parse(localStorage.getItem(k));}catch(e){return;}
+      if(v===goals[p]&&!store.get('food:'+p+':'+d,null)&&!store.get('workouts:'+p,[]).some(x=>x.d===d)){try{localStorage.removeItem(k);}catch(e){}delete mem[k];}});
+    store.set('migr_waterclean',true);}
 }
 function exDefs(){return store.get('exdef:'+state.person+':'+state.prog,[]);}
 function setExDefs(d){store.set('exdef:'+state.person+':'+state.prog,d);}
@@ -541,7 +545,7 @@ function heatmapCard(){const p=state.person;
 function repsNum(r){const m=(''+r).match(/\d+/);return m?parseInt(m[0]):8;}
 function totalKgAll(){let tot=0;['jo','ra'].forEach(p=>{[1,2,3].forEach(pr=>{(store.get('exdef:'+p+':'+pr,[])).forEach(e=>{if(e.repsOnly)return;const sets=e.sets||3,reps=repsNum(e.reps);(store.get('hist:'+p+':'+e.id,[])).forEach(x=>{if(x&&x.w>0&&!x.demo)tot+=x.w*sets*reps;});});});});return Math.round(tot);}
 function dayUsedAny(off){const d=dkey(off);return ['jo','ra'].some(p=>{if(store.get('water:'+p+':'+d,0)>0)return true;if(store.get('workouts:'+p,[]).some(x=>x.d===d))return true;if(store.get('food:'+p+':'+d,null))return true;return false;});}
-function coupleStreak(){let s=0;for(let i=0;i<400;i++){if(dayUsedAny(i))s++;else break;}return s;}
+function coupleStreak(){let s=0;for(let i=0;i<400;i++){if(dayUsedAny(i))s++;else if(i===0)continue;else break;}return s;}
 function wrappedData(p){const N=30;let sali=0,lenkki=0,km=0,water=0;
   store.get('workouts:'+p,[]).forEach(x=>{if(within(x.d,N)){if(x.type==='sali')sali++;else if(x.type==='lenkki'){lenkki++;km+=x.km||0;}}});
   for(let i=0;i<N;i++)water+=store.get('water:'+p+':'+dkey(i),0);
@@ -785,7 +789,7 @@ function deleteWorkout(i){const w=store.get('workouts:'+state.person,[]);if(i<0|
 /* VESI */
 function waterGoal(){return state.person==='jo'?2000:2500;}
 function waterToday(){return store.get('water:'+state.person+':'+state.date,0);}
-function streakOf(p){let s=0;const g=p==='jo'?2000:2500;for(let i=0;i<90;i++){if(store.get('water:'+p+':'+dkey(i),0)>=g)s++;else break;}return s;}
+function streakOf(p){let s=0;const g=p==='jo'?2000:2500;for(let i=0;i<90;i++){if(store.get('water:'+p+':'+dkey(i),0)>=g)s++;else if(i===0)continue;else break;}return s;}
 function addWater(ml){const before=waterToday(),g=waterGoal();let v=Math.max(0,before+ml);store.set('water:'+state.person+':'+state.date,v);
   if(before<g&&v>=g){celebrate('💧 Vesitavoite täynnä!');checkDay();checkMilestones();}renderVesi();}
 function checkMilestones(){const s=streakOf(state.person);const done=store.get('wms:'+state.person,[]);[3,7,14,30].forEach(m=>{if(s>=m&&!done.includes(m)){done.push(m);store.set('wms:'+state.person,done);celebrate('🔥 '+m+' päivän putki – mahtavaa, jatka samaan malliin!',true);}});checkGoals();}
