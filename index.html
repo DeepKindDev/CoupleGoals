@@ -246,8 +246,24 @@
   .hsub{font-size:1.0rem;color:var(--dim);margin-top:3px;line-height:1.42;}
   .datebtn{background:none;border:none;color:var(--dim);font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;padding:4px 6px;border-radius:8px;}
   .datebtn.past{background:var(--grad);color:#fff;}
-  .date-hidden{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;}
-  #datePick::-webkit-clear-button,#datePick::-webkit-inner-spin-button{display:none;-webkit-appearance:none;}
+  #datepop{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 20px) 18px 20px;background:rgba(0,0,0,.5);}
+  #datepop.hidden{display:none;}
+  .dp-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;width:100%;max-width:340px;}
+  .dp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .dp-head button{background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:10px;width:42px;height:42px;font-size:1.3rem;font-family:inherit;cursor:pointer;}
+  .dp-head button:disabled{opacity:.3;}
+  .dp-title{font-weight:800;font-size:1.12rem;}
+  .dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+  .dp-grid .wd{text-align:center;font-size:.82rem;color:var(--muted);font-weight:700;padding:3px 0;}
+  .dp-grid button{aspect-ratio:1;border:none;background:var(--surface2);color:var(--text);border-radius:9px;font-weight:700;font-family:inherit;font-size:1rem;cursor:pointer;}
+  .dp-grid button.sel{background:var(--grad);color:#fff;}
+  .dp-grid button.today{outline:2px solid var(--p1);}
+  .dp-grid button:disabled{opacity:.25;cursor:default;}
+  .dp-grid .empty{background:none;}
+  .dp-foot{display:flex;gap:8px;margin-top:13px;}
+  .dp-foot button{flex:1;border:none;border-radius:11px;padding:12px;font-weight:800;font-family:inherit;font-size:1rem;cursor:pointer;}
+  .dp-foot .today-b{background:var(--grad);color:#fff;}
+  .dp-foot .close-b{background:var(--surface2);color:var(--text);border:1px solid var(--line);}
   #dateBanner{flex:none;display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;padding:9px 14px;background:linear-gradient(135deg,color-mix(in srgb,var(--p1) 30%,var(--bg2)),color-mix(in srgb,var(--p2) 24%,var(--bg2)));border-bottom:1px solid var(--line);font-size:.98rem;font-weight:700;color:var(--text);}
   #dateBanner.hidden{display:none;}
   #dateBanner button{background:#fff;color:var(--p1);border:none;border-radius:9px;padding:6px 13px;font-weight:800;font-family:inherit;font-size:.95rem;cursor:pointer;}
@@ -291,9 +307,10 @@
 <div id="lock" class="hidden"></div>
 <div id="settings" class="hidden"></div>
 <div id="wrapped" class="hidden"></div>
+<div id="datepop" class="hidden"></div>
 
 <header>
-  <div class="h-top"><div class="title">CoupleGoals</div><div style="display:flex;align-items:center;gap:4px"><span style="position:relative;display:inline-block"><button class="datebtn" id="dateLbl" title="Vaihda päivää"></button><input type="date" id="datePick" required onchange="setDate(this.value)" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;padding:0;margin:0;cursor:pointer;"></span><button class="lockbtn" title="Asetukset" onclick="openSettings()">⚙️</button><button class="lockbtn" title="Lukitse" onclick="lockNow()">🎯</button></div></div>
+  <div class="h-top"><div class="title">CoupleGoals</div><div style="display:flex;align-items:center;gap:4px"><button class="datebtn" id="dateLbl" title="Vaihda päivää" onclick="openDatePop()"></button><button class="lockbtn" title="Asetukset" onclick="openSettings()">⚙️</button><button class="lockbtn" title="Lukitse" onclick="lockNow()">🎯</button></div></div>
   <div class="who">
     <button class="on" id="whoJo" onclick="setPerson('jo')">Profiili 1</button>
     <button id="whoRa" onclick="setPerson('ra')">Profiili 2</button>
@@ -335,9 +352,25 @@ function pad2(n){return (n<10?'0':'')+n;}
 function curDateObj(){const a=state.date.split('-').map(Number);return new Date(a[0],a[1]-1,a[2]);}
 function dateInputVal(dstr){const a=dstr.split('-').map(Number);return a[0]+'-'+pad2(a[1])+'-'+pad2(a[2]);}
 function fmtDateLabel(){const d=curDateObj(),today=dkey(0)===state.date;return (today?'Tänään ':'📅 ')+WDAYS[d.getDay()]+' '+d.getDate()+'.'+(d.getMonth()+1)+'.';}
-function updateDateLabel(){const el=document.getElementById('dateLbl');if(!el)return;el.textContent=fmtDateLabel();el.classList.toggle('past',dkey(0)!==state.date);const inp=document.getElementById('datePick');if(inp){inp.value=dateInputVal(state.date);inp.max=dateInputVal(dkey(0));}}
+function updateDateLabel(){const el=document.getElementById('dateLbl');if(!el)return;el.textContent=fmtDateLabel();el.classList.toggle('past',dkey(0)!==state.date);}
 function renderDateBanner(){const b=document.getElementById('dateBanner');if(!b)return;if(dkey(0)===state.date){b.classList.add('hidden');b.innerHTML='';return;}const d=curDateObj();b.classList.remove('hidden');b.innerHTML=`📅 Kirjaat menneelle päivälle: <b>${WDAYS[d.getDay()]} ${d.getDate()}.${d.getMonth()+1}.</b><button onclick="resetToday()">↩︎ Tänään</button>`;}
-function openDatePicker(){const inp=document.getElementById('datePick');inp.value=dateInputVal(state.date);inp.max=dateInputVal(dkey(0));try{inp.showPicker();}catch(e){inp.focus();inp.click();}}
+let dpY,dpM;
+function openDatePop(){const a=state.date.split('-').map(Number);dpY=a[0];dpM=a[1];document.getElementById('datepop').classList.remove('hidden');renderDatePop();}
+function closeDatePop(){document.getElementById('datepop').classList.add('hidden');}
+function dpNav(delta){dpM+=delta;if(dpM<1){dpM=12;dpY--;}else if(dpM>12){dpM=1;dpY++;}renderDatePop();}
+function dpPick(d){setDate(dpY+'-'+dpM+'-'+d);closeDatePop();}
+function dpToday(){resetToday();closeDatePop();}
+function renderDatePop(){const MN=['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu','Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+  const tA=dkey(0).split('-').map(Number),todayObj=new Date(tA[0],tA[1]-1,tA[2]),sel=state.date.split('-').map(Number);
+  const startWd=(new Date(dpY,dpM-1,1).getDay()+6)%7,days=new Date(dpY,dpM,0).getDate();
+  const nextBlocked=(dpY>tA[0]||(dpY===tA[0]&&dpM>=tA[1]));
+  let h='<div class="dp-card"><div class="dp-head"><button onclick="dpNav(-1)">‹</button><div class="dp-title">'+MN[dpM-1]+' '+dpY+'</div><button onclick="dpNav(1)" '+(nextBlocked?'disabled':'')+'>›</button></div><div class="dp-grid">';
+  ['ma','ti','ke','to','pe','la','su'].forEach(w=>h+='<div class="wd">'+w+'</div>');
+  for(let i=0;i<startWd;i++)h+='<div class="empty"></div>';
+  for(let d=1;d<=days;d++){const future=new Date(dpY,dpM-1,d)>todayObj;const isSel=(dpY===sel[0]&&dpM===sel[1]&&d===sel[2]);const isToday=(dpY===tA[0]&&dpM===tA[1]&&d===tA[2]);
+    h+=`<button class="${isSel?'sel':''}${isToday?' today':''}" ${future?'disabled':''} onclick="dpPick(${d})">${d}</button>`;}
+  h+='</div><div class="dp-foot"><button class="today-b" onclick="dpToday()">Tänään</button><button class="close-b" onclick="closeDatePop()">Sulje</button></div></div>';
+  document.getElementById('datepop').innerHTML=h;}
 function setDate(val){if(!val)return;const a=val.split('-').map(Number);state.date=a[0]+'-'+a[1]+'-'+a[2];state.editing=null;state.adding=false;state.valEdit=null;afterDateChange();}
 function resetToday(){state.date=dkey(0);state.editing=null;state.adding=false;state.valEdit=null;afterDateChange();}
 function afterDateChange(){updateDateLabel();renderDateBanner();renderActive();}
