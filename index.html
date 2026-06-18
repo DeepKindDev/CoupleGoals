@@ -354,6 +354,7 @@
 
 <script>
 const CONFIG={SHEET_API_URL:""};
+const APP_VERSION='18.6.2026 · kisakortti + vaihtuvat lauseet';
 const mem={};
 const store={get(k,def){try{const v=localStorage.getItem(k);return v==null?(k in mem?mem[k]:def):JSON.parse(v);}catch(e){return (k in mem)?mem[k]:def;}},
   set(k,v){mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}if(typeof scheduleSync==='function')scheduleSync(k);}};
@@ -1060,7 +1061,8 @@ function renderSettings(){const S=document.getElementById('settings');const waOk
   h+=`<div class="set-row"><input type="text" id="syToken" value="${esc(store.get('syncToken',''))}" placeholder="Salasana (sama kuin skriptissä)"></div>`;
   h+=`<div class="pbtns"><button class="btn ${syncOn()?'ok':'grad'}" onclick="saveSync()">${syncOn()?'Tallennettu ✓':'Tallenna'}</button><button class="btn ok" onclick="syncPull()">⬇︎ Hae nyt</button><button class="btn ok" onclick="syncPush()">⬆︎ Lähetä nyt</button></div>`;
   h+=`<div class="set-mini" style="margin-top:8px">${syncOn()?'✅ Automaattisynkka päällä — tiedot haetaan sovellusta avatessa ja lähetetään automaattisesti kirjausten jälkeen.':'Täytä kentät ja Tallenna, niin synkka muuttuu automaattiseksi.'} ${last?('Viimeksi: '+new Date(last).toLocaleString('fi-FI')):''}</div></div>`;
-  h+='<button class="btn grad" style="width:100%" onclick="closeSettings()">Sulje</button></div>';
+  h+='<button class="btn grad" style="width:100%" onclick="closeSettings()">Sulje</button>';
+  h+=`<div class="set-mini" style="text-align:center;margin-top:12px;opacity:.7">Versio: ${APP_VERSION}</div></div>`;
   S.innerHTML=h;}
 /* Painon suora syöttö */
 function editVal(id){state.valEdit=id;renderSali();}

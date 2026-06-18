@@ -1,6 +1,6 @@
 // CoupleGoals service worker — "network-first": hakee aina uusimman version
 // kun olet verkossa, ja käyttää viimeksi tallennettua versiota offline-tilassa.
-const CACHE = 'cg-cache';
+const CACHE = 'cg-cache-2';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
 
