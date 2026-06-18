@@ -250,6 +250,14 @@
   .hval{font-weight:800;}
   .hval.good{color:var(--ok);} .hval.warn{color:var(--warn);}
   .hsub{font-size:1.0rem;color:var(--dim);margin-top:3px;line-height:1.42;}
+  .vs-cheer{font-weight:800;font-size:1.06rem;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:12px;line-height:1.4;}
+  .vs-metric{margin-bottom:13px;}
+  .vs-mtitle{font-weight:800;font-size:1.04rem;margin-bottom:6px;}
+  .vsbar{display:flex;align-items:center;gap:9px;margin:5px 0;}
+  .vsbar .vlabel{width:92px;font-weight:700;font-size:.96rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .vsbar-track{flex:1;height:20px;background:var(--surface2);border-radius:8px;overflow:hidden;}
+  .vsbar-fill{height:100%;width:0;border-radius:8px;transition:width .9s cubic-bezier(.2,.8,.2,1);}
+  .vsbar .vval{width:56px;text-align:right;font-weight:800;font-size:.96rem;}
   .datebtn{background:none;border:none;color:var(--dim);font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;padding:4px 6px;border-radius:8px;}
   .datebtn.past{background:var(--grad);color:#fff;}
   #datepop{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 20px) 18px 20px;background:rgba(0,0,0,.5);}
@@ -601,7 +609,8 @@ function foodDashboard(f){const aDone=!!f.aamupala,lDone=mealDone(f.lounas),pDon
 function renderRuoka(){
   const f=foodState(),p=state.person;let h=foodDashboard(f);
   const aDone=!!f.aamupala,lDone=mealDone(f.lounas),pDone=mealDone(f.paivallinen),vDone=!!(f.valipala.raejuusto||f.valipala.pahkina||f.valipala.rahka),iDone=!!(f.iltapala.leipa||f.iltapala.raejuusto||f.iltapala.rahka||f.iltapala.jogurtti);
-  const tip='Proteiinia joka aterialle — pitää nälän loitolla ja tukee lihaskasvua 💪';
+  const FTIPS=['Proteiinia joka aterialle — pitää nälän loitolla ja tukee lihaskasvua 💪','Proteiini ensin — se meinaa helposti unohtua 😉','Väriä lautaselle: puoli lautasta kasviksia 🥗','Säännöllinen ateriarytmi = tasainen energia koko päivän ⚡','Syö kylläiseksi, älä ähkyyn — laatu ratkaisee ✨','Palautuminen alkaa lautaselta — proteiinia treenin jälkeen 💪','Hyvin syöty päivä on voitto. Yksi valinta kerrallaan 💞'];
+  const tip=FTIPS[new Date().getHours()%FTIPS.length];
   h+=`<div class="foodhero"><div class="fh-t">🍽️ Ruoka tänään</div><div class="fh-s">${tip}</div><div class="fh-prog"><button class="fh-chip ${aDone?'on':''}" onclick="jumpTo('sec-aamupala')">🌅 Aamupala</button><button class="fh-chip ${lDone?'on':''}" onclick="jumpTo('sec-lounas')">☀️ Lounas</button><button class="fh-chip ${pDone?'on':''}" onclick="jumpTo('sec-paivallinen')">🌙 Päivällinen</button><button class="fh-chip ${vDone?'on':''}" onclick="jumpTo('sec-valipala')">🍎 Välipala</button><button class="fh-chip ${iDone?'on':''}" onclick="jumpTo('sec-iltapala')">🌜 Iltapala</button></div></div>`;
   const wl=(Math.round(waterToday()/100)/10).toString().replace('.',','),wg=(waterGoal()/1000).toString().replace('.',',');
   const WTIPS=['Pidä pullo lähellä ja ota kulaus silloin tällöin.','Jano naamioituu usein näläksi — ehditkö lasilliseen nyt?','Vesi on halvin energiajuoma 💙','Hyvin nesteytetty keho jaksaa treenata paremmin.'];
@@ -889,11 +898,12 @@ function logMeasures(){const pv=parseFloat((document.getElementById('mP').value|
   toast('📏 Mitat kirjattu!');checkBadges();renderEdist();}
 function renderEdist(){
   checkGoals();
-  let h=partnerCard()+'<button class="btn grad full" style="margin:2px 0 14px" onclick="openWrapped()">✨ Näytä CoupleGoals Wrapped</button>'+weeklyCard()+heatmapCard()+goalsCard()+measuresCard()+healthCard()+monthlyCard();
+  let h=partnerCard()+'<button class="btn grad full" style="margin:2px 0 14px" onclick="openWrapped()">✨ Näytä CoupleGoals Wrapped</button>'+vsCard()+weeklyCard()+heatmapCard()+goalsCard()+measuresCard()+healthCard()+monthlyCard();
   h+='<h2 class="sec">Liikkeiden kehitys</h2>';
   const act=exDefs().filter(e=>e.active);
   act.forEach(e=>{h+=`<div class="chartbox"><h4>${e.n} <span style="font-size:.9rem;color:var(--muted);font-weight:600">— ${e.sets}×${e.reps}</span>${demoTag(hist(e.id))}</h4><div id="pc_${e.id}"></div></div>`;});
   document.getElementById('v-edist').innerHTML=h;
+  requestAnimationFrame(()=>{document.querySelectorAll('#v-edist .vsbar-fill').forEach(el=>{el.style.width=(el.dataset.w||0)+'%';});});
   // draw measure charts
   const ph=store.get('paino:'+state.person,[]),vh=store.get('vyotaro:'+state.person,[]),lh=store.get('lantio:'+state.person,[]);
   if(ph.length)lineChart('mc_p',{height:130,categories:ph.map((x,i)=>'#'+(i+1)),series:[{data:ph.map(x=>x.w)}]});
@@ -997,6 +1007,25 @@ function healthCard(){const p=state.person,s=sexOf(p),age=ageOf(p),hgt=heightOf(
   h+=`<div class="hrow"><span>Voimaharjoittelu / viikko</span><span class="hval ${strg>=2?'good':''}">${strg} / 2 krt</span></div>`;
   h+=`<div class="hsub">WHO suosittelee aikuisille noin 150 min reipasta liikuntaa ja 2 voimaharjoitusta viikossa.${age?' · Ikäsi: '+age+' v.':''}</div>`;
   h+='<div class="hsub" style="opacity:.7;margin-top:9px">Yleisiä terveyssuosituksia (mm. WHO) — ei henkilökohtaista lääketieteellistä neuvoa.</div>';
+  h+='</div>';return h;}
+function mealsCountOn(p,d){const f=Object.assign(DEFAULTFOOD(),store.get('food:'+p+':'+d,{}));return (f.aamupala?1:0)+(mealDone(f.lounas)?1:0)+(mealDone(f.paivallinen)?1:0)+((f.valipala.raejuusto||f.valipala.pahkina||f.valipala.rahka)?1:0)+((f.iltapala.leipa||f.iltapala.raejuusto||f.iltapala.rahka||f.iltapala.jogurtti)?1:0);}
+function saliWeek(p,wk){let c=0;store.get('workouts:'+p,[]).forEach(x=>{if(x.type==='sali'){const a=x.d.split('-').map(Number);const ago=Math.floor((Date.now()-new Date(a[0],a[1]-1,a[2]).getTime())/86400000);if(ago>=wk*7&&ago<wk*7+7)c++;}});return c;}
+function vsBar(p,pct,val,lead){const col=p==='jo'?'linear-gradient(135deg,#b15cff,#ff5fa2)':'linear-gradient(135deg,#22d3c5,#3b82f6)';
+  return `<div class="vsbar"><span class="vlabel">${nm(p)}${lead?' 👑':''}</span><div class="vsbar-track"><div class="vsbar-fill" data-w="${Math.round(Math.max(0,Math.min(100,pct)))}" style="background:${col}"></div></div><span class="vval">${val}</span></div>`;}
+function vsCard(){const t=dkey(0);
+  const mJ=mealsCountOn('jo',t),mR=mealsCountOn('ra',t);
+  const wJ=store.get('water:jo:'+t,0),wR=store.get('water:ra:'+t,0),gJ=2000,gR=2500;
+  const sJ=saliWeek('jo',0),sR=saliWeek('ra',0);
+  const L=(a,b)=>a>b?'jo':b>a?'ra':'';
+  const fmtL=ml=>(Math.round(ml/100)/10).toString().replace('.',',')+' l';
+  const mL=L(mJ,mR),wL=L(wJ/gJ,wR/gR),sL=L(sJ,sR);
+  const CHEERS=['Pieni kisa pitää liekin yllä — kannustakaa toisianne! 🔥','Yhdessä vahvempia, erikseen nopeampia! 🏃‍♀️🏃','Kuka vie tämän viikon? Peli on auki! 🎯','Terve kilpailu = tuplasti motivaatiota 💞','Tänään on hyvä päivä napata kärkipaikka 😏','Hävinnytkin voittaa, kun molemmat treenaa 💪'];
+  const cheer=CHEERS[(new Date().getDate()+new Date().getHours())%CHEERS.length];
+  let h='<h2 class="sec">Kisa 🔥</h2><div class="card"><div class="vs-cheer">'+cheer+'</div>';
+  h+='<div class="vs-metric"><div class="vs-mtitle">🍽️ Ruokailut tänään</div>'+vsBar('jo',mJ/5*100,mJ+'/5',mL==='jo')+vsBar('ra',mR/5*100,mR+'/5',mL==='ra')+'</div>';
+  h+='<div class="vs-metric"><div class="vs-mtitle">💧 Vesi tänään</div>'+vsBar('jo',wJ/gJ*100,fmtL(wJ),wL==='jo')+vsBar('ra',wR/gR*100,fmtL(wR),wL==='ra')+'</div>';
+  h+='<div class="vs-metric"><div class="vs-mtitle">🏋️ Salitreenit tällä viikolla</div>'+vsBar('jo',sJ/3*100,sJ+'/3',sL==='jo')+vsBar('ra',sR/3*100,sR+'/3',sL==='ra')+'</div>';
+  h+='<div class="hsub">👑 = edellä juuri nyt. Vesi vertaillaan kunkin omaan päivätavoitteeseen. Näkyy molempien data kun synkka on päällä.</div>';
   h+='</div>';return h;}
 function changePin(p){lock.person=p;lock.mode='set1';lock.buf='';lock.tmp=null;lock.err='';lock.changing=true;closeSettings();document.getElementById('lock').classList.remove('hidden');renderLock();}
 const PGRAD={jo:'linear-gradient(135deg,#b15cff,#ff5fa2)',ra:'linear-gradient(135deg,#22d3c5,#3b82f6)'};
