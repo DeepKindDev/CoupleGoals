@@ -135,6 +135,10 @@
   .lk .row input{flex:1;}
   .lenkki-item{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px 14px;margin-bottom:8px;font-size:1.04rem;}
   .lenkki-item .em{font-size:1.3rem;} .lenkki-item .r{margin-left:auto;color:var(--dim);font-size:.98rem;}
+  .traingoal{display:flex;align-items:flex-start;gap:10px;background:linear-gradient(135deg,color-mix(in srgb,var(--p1) 26%,var(--surface)),color-mix(in srgb,var(--p2) 18%,var(--surface)));border:1px solid var(--line);border-radius:15px;padding:12px 14px;margin:0 0 14px;}
+  .traingoal .tg-icon{font-size:1.3rem;flex:none;line-height:1.3;}
+  .traingoal .tg-txt{flex:1;font-weight:700;font-size:1rem;line-height:1.42;}
+  .traingoal .tg-edit{flex:none;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:2px 4px;font-family:inherit;}
   .lenkki-item .wdel{flex:none;background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:4px 6px;margin-left:8px;font-family:inherit;}
   .lenkki-item .wdel:active{color:var(--warn);}
 
@@ -598,8 +602,11 @@ function tglField(path){const f=foodState();const p=path.split('.');if(p.length=
 
 /* RENDER TREENI (sali + lenkit) */
 const LENKKI_TYPES=[{k:'Kävely',e:'🚶'},{k:'Juoksu',e:'🏃'},{k:'Polkujuoksu',e:'⛰️'},{k:'Luontopolku',e:'🌲'},{k:'Geokätköily',e:'🧭'},{k:'Muu fyysinen aktiviteetti',e:'🤸'}];
+function trainGoalText(p){return store.get('trainGoal:'+p, p==='jo'?'Pepputreeni: tavoite +2,5 kg/viikko hip thrustiin & jalkaprässiin, kun toistot täyttyvät kivutta.':'Alavartalopainotteinen treeni — yläkroppa toipuu.');}
+function editTrainGoal(){const v=prompt('Treenitavoite (näkyy joka treenikerralla):',trainGoalText(state.person));if(v!=null){store.set('trainGoal:'+state.person,v.trim());renderSali();}}
 function renderSali(){
-  let h='<h3 class="sub">Salitreeni</h3><div class="amt" style="font-weight:800;color:var(--text);margin:0 3px 4px">Mikä treeni tänään?</div><div class="progbar">';
+  let h=`<div class="traingoal"><span class="tg-icon">🎯</span><span class="tg-txt">${trainGoalText(state.person).replace(/</g,'&lt;')}</span><button class="tg-edit" onclick="editTrainGoal()" title="Muokkaa tavoitetta">✎</button></div>`;
+  h+='<h3 class="sub">Salitreeni</h3><div class="amt" style="font-weight:800;color:var(--text);margin:0 3px 4px">Mikä treeni tänään?</div><div class="progbar">';
   [1,2,3].forEach(pr=>{h+=`<button class="${state.prog===pr?'on':''}" onclick="setProg(${pr})">${PROG_META[pr].e} ${PROG_META[pr].l}</button>`;});
   h+='</div>';
   exDefs().filter(e=>e.active).forEach(e=>{const cur=pendingWeight(e.id),mx=maxWeight(e.id),isPR=cur>mx&&cur>0;
@@ -624,7 +631,6 @@ function renderSali(){
   if(recent.length){h+='<div class="amt" style="margin:8px 3px 8px;font-weight:800;color:var(--text)">Viimeaikaiset treenit — poista väärät ✕</div>';
     recent.forEach(o=>{const w=o.w;const em=w.type==='sali'?'🏋️':(LENKKI_TYPES.find(t=>t.k===w.label)||{e:'👟'}).e;const extra=(w.min?w.min+' min':'')+(w.km?(w.min?' · ':'')+w.km+' km':'');
       h+=`<div class="lenkki-item"><span class="em">${em}</span><span>${w.label}${w.type==='sali'?' · sali':''}</span><span class="r">${fmtShort(w.d)}${extra?' · '+extra:''}</span><button class="wdel" onclick="deleteWorkout(${o.i})" title="Poista">✕</button></div>`;});}
-  h+=`<div class="hint">${state.person==='jo'?'Pepputreeni: tavoite ~2,5 kg/viikko hip thrustiin & jalkaprässiin, kun toistot täyttyvät kivutta.':'Lisää painoa pikkuhiljaa kun toistot täyttyvät hyvällä tekniikalla.'}</div>`;
   document.getElementById('v-sali').innerHTML=h;
   // type chips
   let lc='';LENKKI_TYPES.forEach((t,i)=>lc+=`<div class="chip ${state._lk===t.k?'sel':''}" onclick="state._lk='${t.k}';renderSali()"><span>${t.e} ${t.k}</span></div>`);
@@ -936,7 +942,7 @@ function commitVal(id,v){const x=parseFloat((v||'').replace(',','.'));if(!isNaN(
    EIVÄT koodiin → eivät näy julkisessa GitHub-koodissa. Sovellus puhuu vain Apps Script
    -osoitteelle, joka pääsee vain yhteen taulukkoon (@OnlyCurrentDoc) — ei Driveen.
    Turva-avaimet (PIN, Face ID, palautus) EIVÄT synkkaannu. */
-const SYNC_PREFIXES=['food:','water:','paino:','vyotaro:','lantio:','workouts:','exdef:','hist:','prs:','pend:','goalWeek:','goalBig:','rewards:','wms:','name:','celebday:','badges:','migr_'];
+const SYNC_PREFIXES=['food:','water:','paino:','vyotaro:','lantio:','workouts:','exdef:','hist:','prs:','pend:','goalWeek:','goalBig:','rewards:','wms:','name:','celebday:','badges:','trainGoal:','migr_'];
 function syncableKey(k){return SYNC_PREFIXES.some(p=>k.indexOf(p)===0);}
 function syncCfg(){return {url:store.get('syncUrl',''),space:store.get('syncSpace',''),token:store.get('syncToken','')};}
 function syncOn(){const c=syncCfg();return !!(c.url&&c.space);}
