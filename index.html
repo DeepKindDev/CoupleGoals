@@ -758,7 +758,7 @@ function goalEditor(scope){
   const key=(scope==='week'?'goalWeek:':'goalBig:')+state.person;const g=store.get(key,null);if(!g)return '';
   const metrics=scope==='week'?WEEK_METRICS:BIG_METRICS;const r=evalGoal(scope,g);const md=metricDef(scope,g.metric);
   let h='<div class="card">';
-  if(r){const exName=g.exName?(' · '+g.exName):'';const pred=r.reached?'':predictGoal(scope,g);
+  if(r){const exName=(g.metric==='liike'&&g.exName)?(' · '+g.exName):'';const pred=r.reached?'':predictGoal(scope,g);
     h+=`<div class="goal-prog"><div class="gp-top"><span>${r.m.label}${exName}</span><span>${r.cur==null?'–':r.cur} / ${g.target} ${r.m.unit}</span></div>
       <div class="bar"><div class="bar-fill" style="width:${r.pct}%"></div></div>
       <div class="gp-st">${g.reward?(r.reached?'🎁 Saavutettu: '+g.reward:'🔒 Palkinto: '+g.reward):'Aseta palkinto alle 👇'}</div>${pred?`<div class="gp-st" style="margin-top:3px">${pred}</div>`:''}</div>`;}
@@ -774,6 +774,7 @@ function gget(scope){return store.get((scope==='week'?'goalWeek:':'goalBig:')+st
 function gset(scope,g){store.set((scope==='week'?'goalWeek:':'goalBig:')+state.person,g);}
 function setGoalMetric(scope,k){const g=gget(scope);g.metric=k;g.earned=false;g.target=0;const md=metricDef(scope,k);
   g.startVal=(md&&md.dir==='down'&&md.start)?md.start(g):null;
+  if(k!=='liike')g.exName=null;
   if(k==='liike'&&!g.exName){const a=allExercises();if(a.length)g.exName=a[0].n;}
   gset(scope,g);renderEdist();}
 function setGoalExName(name){const g=gget('big');g.exName=name;g.exId=null;g.earned=false;gset('big',g);renderEdist();}
