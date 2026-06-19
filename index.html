@@ -370,7 +370,7 @@
 
 <script>
 const CONFIG={SHEET_API_URL:""};
-const APP_VERSION='19.6.2026 · kananmuna + leipä lautasmalliin';
+const APP_VERSION='19.6.2026 · ruisleipä & vaalea leipä erikseen';
 const mem={};
 const store={get(k,def){try{const v=localStorage.getItem(k);return v==null?(k in mem?mem[k]:def):JSON.parse(v);}catch(e){return (k in mem)?mem[k]:def;}},
   set(k,v){mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}if(typeof scheduleSync==='function')scheduleSync(k);}};
@@ -614,7 +614,7 @@ const BREAKFAST={
   ra:[{id:1,n:'Kaurapuuro',a:'Kaura 1½ dl · raejuusto 4–5 rkl · mustikat 1 dl · pellava 1 rkl · (+kauralese 1 rkl) · maitokahvi / tee'},{id:2,n:'Ruispalat',a:'3 ruispalaa · 2 kananmunaa · 2 juustoviipaletta · kalkkuna 3 kpl · kurkku · maitokahvi / tee'},{id:3,n:'Proteiinirahka',a:'Profeel-rahka 175 g + ~½ dl kauraa · mustikat 1 dl · pellava 1 rkl · maitokahvi / tee'},{id:4,n:'Chiavanukas',a:'Chiansiemenet 3 rkl · maito/kaurajuoma 2 dl · mustikat 1 dl · (+rahka/raejuusto) · maitokahvi / tee'},{id:5,n:'Munakas',a:'3 kananmunaa · juusto · kalkkuna · kasviksia · (+ruispala) · maitokahvi / tee'}]
 };
 const PROT={jo:[{k:'kala',n:'Kala',a:'~120 g'},{k:'kana',n:'Kana',a:'~120 g'},{k:'liha',n:'Liha',a:'~120 g'},{k:'kananmuna',n:'Kananmuna',a:'2–3 kpl'}],ra:[{k:'kala',n:'Kala',a:'~180 g'},{k:'kana',n:'Kana',a:'~190 g'},{k:'liha',n:'Liha',a:'~190 g'},{k:'kananmuna',n:'Kananmuna',a:'3–4 kpl'}]};
-const CARB={jo:[{k:'peruna',n:'Peruna',a:'~150 g'},{k:'riisi',n:'Riisi',a:'1 dl'},{k:'leipa',n:'Leipä',a:'2 viipaletta (ruis/vaalea)'}],ra:[{k:'peruna',n:'Peruna',a:'~250 g'},{k:'riisi',n:'Riisi',a:'2 dl'},{k:'leipa',n:'Leipä',a:'3 viipaletta (ruis/vaalea)'}]};
+const CARB={jo:[{k:'peruna',n:'Peruna',a:'~150 g'},{k:'riisi',n:'Riisi',a:'1 dl'},{k:'ruisleipa',n:'Ruisleipä',a:'2 viipaletta'},{k:'vaalealeipa',n:'Vaalea leipä',a:'1–2 viipaletta'}],ra:[{k:'peruna',n:'Peruna',a:'~250 g'},{k:'riisi',n:'Riisi',a:'2 dl'},{k:'ruisleipa',n:'Ruisleipä',a:'3 viipaletta'},{k:'vaalealeipa',n:'Vaalea leipä',a:'2 viipaletta'}]};
 const SOUPS=[{k:'lohi',n:'Lohikeitto'},{k:'kana',n:'Kanakeitto'},{k:'poro',n:'Savuporokeitto'},{k:'makkara',n:'Makkarakeitto'},{k:'pinaatti',n:'Pinaattikeitto'},{k:'herne',n:'Hernekeitto'}];
 const GRILL=[{k:'hamppari',n:'Oma hampurilainen',a:'1 sämpylä + iso pihvi + salaatti'}];
 const MUU={jo:[{k:'bolognese',n:'Spag. bolognese'},{k:'tortilla',n:'Tortilla'},{k:'kookos',n:'Kana-kookos'},{k:'carbonara',n:'Carbonara'},{k:'hese',n:'Hese / Mäkki'},{k:'sushi',n:'Sushi',a:'~8–10 palaa (1 rulla)'}],
