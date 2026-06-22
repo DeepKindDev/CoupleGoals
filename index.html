@@ -370,7 +370,7 @@
 
 <script>
 const CONFIG={SHEET_API_URL:""};
-const APP_VERSION='19.6.2026 · ruisleipä & vaalea leipä erikseen';
+const APP_VERSION='19.6.2026 · hiilari valinnainen + keitto yksinkertaistettu';
 const mem={};
 const store={get(k,def){try{const v=localStorage.getItem(k);return v==null?(k in mem?mem[k]:def):JSON.parse(v);}catch(e){return (k in mem)?mem[k]:def;}},
   set(k,v){mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}if(typeof scheduleSync==='function')scheduleSync(k);}};
@@ -615,7 +615,7 @@ const BREAKFAST={
 };
 const PROT={jo:[{k:'kala',n:'Kala',a:'~120 g'},{k:'kana',n:'Kana',a:'~120 g'},{k:'liha',n:'Liha',a:'~120 g'},{k:'kananmuna',n:'Kananmuna',a:'2–3 kpl'}],ra:[{k:'kala',n:'Kala',a:'~180 g'},{k:'kana',n:'Kana',a:'~190 g'},{k:'liha',n:'Liha',a:'~190 g'},{k:'kananmuna',n:'Kananmuna',a:'3–4 kpl'}]};
 const CARB={jo:[{k:'peruna',n:'Peruna',a:'~150 g'},{k:'riisi',n:'Riisi',a:'1 dl'},{k:'ruisleipa',n:'Ruisleipä',a:'2 viipaletta'},{k:'vaalealeipa',n:'Vaalea leipä',a:'1–2 viipaletta'}],ra:[{k:'peruna',n:'Peruna',a:'~250 g'},{k:'riisi',n:'Riisi',a:'2 dl'},{k:'ruisleipa',n:'Ruisleipä',a:'3 viipaletta'},{k:'vaalealeipa',n:'Vaalea leipä',a:'2 viipaletta'}]};
-const SOUPS=[{k:'lohi',n:'Lohikeitto'},{k:'kana',n:'Kanakeitto'},{k:'poro',n:'Savuporokeitto'},{k:'makkara',n:'Makkarakeitto'},{k:'pinaatti',n:'Pinaattikeitto'},{k:'herne',n:'Hernekeitto'}];
+const KEITTOPROT={jo:[{k:'kana',n:'Kana',a:'~100 g'},{k:'kala',n:'Kala',a:'~100 g'},{k:'liha',n:'Liha',a:'~100 g'},{k:'kananmuna',n:'Kananmuna',a:'2 kpl'},{k:'papu',n:'Papu/linssi',a:'~1 dl'}],ra:[{k:'kana',n:'Kana',a:'~150 g'},{k:'kala',n:'Kala',a:'~150 g'},{k:'liha',n:'Liha',a:'~150 g'},{k:'kananmuna',n:'Kananmuna',a:'3 kpl'},{k:'papu',n:'Papu/linssi',a:'~1,5 dl'}]};
 const GRILL=[{k:'hamppari',n:'Oma hampurilainen',a:'1 sämpylä + iso pihvi + salaatti'}];
 const MUU={jo:[{k:'bolognese',n:'Spag. bolognese'},{k:'tortilla',n:'Tortilla'},{k:'kookos',n:'Kana-kookos'},{k:'carbonara',n:'Carbonara'},{k:'hese',n:'Hese / Mäkki'},{k:'sushi',n:'Sushi',a:'~8–10 palaa (1 rulla)'}],
   ra:[{k:'bolognese',n:'Spag. bolognese'},{k:'tortilla',n:'Tortilla'},{k:'kookos',n:'Kana-kookos'},{k:'carbonara',n:'Carbonara'},{k:'hese',n:'Hese / Mäkki'},{k:'sushi',n:'Sushi',a:'~14–18 palaa (2 rullaa)'}]};
@@ -623,7 +623,7 @@ function DEFAULTFOOD(){return {aamupala:null,lounas:{tyyppi:'lautas',prot:null,s
 function foodState(){return Object.assign(DEFAULTFOOD(),store.get('food:'+state.person+':'+state.date,{}));}
 function foodOf(p){return Object.assign(DEFAULTFOOD(),store.get('food:'+p+':'+state.date,{}));}
 function saveFood(f){store.set('food:'+state.person+':'+state.date,f);checkDay();}
-function mealDone(m){return m.tyyppi==='lautas'?(m.prot&&m.carb):m.tyyppi==='keitto'?!!m.keitto:m.tyyppi==='grilli'?!!m.grill:!!m.muu;}
+function mealDone(m){return m.tyyppi==='lautas'?!!m.prot:m.tyyppi==='keitto'?true:m.tyyppi==='grilli'?!!m.grill:!!m.muu;}
 function checkDay(){const f=foodState();const done=f.aamupala&&mealDone(f.lounas)&&mealDone(f.paivallinen)&&waterToday()>=waterGoal();
   const flag='celebday:'+state.person+':'+state.date;if(done&&!store.get(flag,false)){store.set(flag,true);celebrate('🎉 Päivä putkessa – ruoat ja vesi kohdillaan!');checkGoals();}}
 
@@ -675,8 +675,8 @@ function renderRuoka(){
     if(m.tyyppi==='lautas'){h+='<div class="amt" style="margin-top:12px;font-weight:800;color:var(--text)">Proteiini</div><div class="chips">';PROT[p].forEach(x=>h+=chip(`setSel('${meal}','prot','${x.k}')`,x.n,x.a,m.prot===x.k));h+='</div>';
       h+='<div class="amt" style="margin-top:12px;font-weight:800;color:var(--text)">Salaatti</div>';
       h+=`<div class="chips">${chip(`tglSalad('${meal}')`,'Salaatti','puoli lautasta + öljy',m.salaatti)}</div>`;
-      h+='<div class="amt" style="margin-top:12px;font-weight:800;color:var(--text)">Hiilihydraatti</div><div class="chips">';CARB[p].forEach(x=>h+=chip(`setSel('${meal}','carb','${x.k}')`,x.n,x.a,m.carb===x.k));h+='</div>';}
-    else if(m.tyyppi==='keitto'){h+='<div class="chips" style="margin-top:12px">';SOUPS.forEach(x=>h+=chip(`setSel('${meal}','keitto','${x.k}')`,x.n,'',m.keitto===x.k));h+='</div><div class="hint">Keittopäivä merkitty. Lisää kasviksia / proteiinilisuke.</div>';}
+      h+='<div class="amt" style="margin-top:12px;font-weight:800;color:var(--text)">Hiilihydraatti <span style="font-weight:600;color:var(--muted);font-size:.9rem">(valinnainen)</span></div><div class="chips">';CARB[p].forEach(x=>h+=chip(`setSel('${meal}','carb','${x.k}')`,x.n,x.a,m.carb===x.k));h+='</div>';}
+    else if(m.tyyppi==='keitto'){h+='<div class="amt" style="margin-top:12px;font-weight:800;color:var(--text)">Proteiinilisä (valinnainen)</div><div class="chips">';KEITTOPROT[p].forEach(x=>h+=chip(`setSel('${meal}','keitto','${x.k}')`,x.n,x.a,m.keitto===x.k));h+='</div><div class="hint">Keitto valittu — ateria on merkitty. Voit halutessasi lisätä proteiinilisän.</div>';}
     else if(m.tyyppi==='grilli'){h+='<div class="chips" style="margin-top:12px">';GRILL.forEach(x=>h+=chip(`setSel('${meal}','grill','${x.k}')`,x.n,x.a,m.grill===x.k));h+='</div><div class="hint">Grillipäivä: muiden aterioiden tärkkelys/lisätty rasva pienemmäksi.</div>';}
     else{h+='<div class="chips" style="margin-top:12px">';MUU[p].forEach(x=>h+=chip(`setSel('${meal}','muu','${x.k}')`,x.n,x.a||'',m.muu===x.k));h+='</div><div class="hint">Kohtuullinen annos + salaatti. Carbonara & Hese/Mäkki harvemmin; sushissa suosi lohta/kalaa + edamame.</div>';}
     h+='</div>';});
